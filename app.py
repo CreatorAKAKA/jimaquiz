@@ -82,6 +82,7 @@ from token_test import extract_vocabulary #extracts vocabulary from Japanese tex
 from dictionary_test import get_definitions #fetches definitions for Japanese words using Jamdict
 import html
 from database import (init_db, save_flashcard, load_flashcards, update_context_sentences, delete_word, delete_context, load_groups, add_word_to_set)
+from reading_input import instant_reading_input
 @st.cache_resource
 def load_reader():
     return easyocr.Reader(["ja"], gpu=False) #initialize the reader with Japanese language recognition, use cpu
@@ -642,12 +643,14 @@ elif mode == "Review":
 
                         st.session_state["correct_reading"] = info["reading"]
 
-                        st.text_input(
-                            "Type the reading",
-                            key="reading_input",
-                            placeholder="ひらがなで入力...",
-                            on_change=check_reading
+                        matched = instant_reading_input(
+                            info["reading"],
+                            key=f"reading_{current_word}"
                         )
+
+                        if matched:
+                            st.session_state["card_flipped"] = True
+                            st.rerun()
 
                     with right:
                         if contexts:
