@@ -1,5 +1,5 @@
 import streamlit as st
-from database import create_group, create_set, load_groups, delete_set, rename_set, move_set, add_word_to_set, load_set_words, load_saved_words
+from database import create_group, create_set, load_groups, delete_set, rename_set, move_set, add_word_to_set, load_set_words, load_saved_words, load_flashcards
 
 def apply_collections_css():
     st.markdown("""
@@ -378,7 +378,18 @@ def add_vocabulary_dialog(set_id, set_title):
 
             st.rerun()
 
-
+def start_study_session(set_id, words):
+    st.session_state["study_set_id"] = set_id
+    st.session_state["study_set_words"] = [
+        entry["word"] for entry in words
+    ]
+    st.session_state["study_queue"] = [
+        entry["word"] for entry in words
+    ]
+    st.session_state["navigation"] = "Review"
+    st.session_state["card_index"] = 0
+    st.session_state["context_index"] = 0
+    st.session_state["card_flipped"] = False
 
 def render_set_card(collection_set, show_menu=False, deck_id=None):
     """Render a shared set card for Library and Bookshelf."""
@@ -441,6 +452,139 @@ def show_collections():
     if "open_set" not in st.session_state:
         st.session_state["open_set"] = None
 
+    # SET VIEW
+    if st.session_state["open_set"] is not None:
+        set_id = st.session_state["open_set"]
+
+        back_label = (
+            "← Back to Bookshelf"
+            if st.session_state["open_deck"] is not None
+            else "← Back to Library"
+        )
+
+        if st.button(back_label, key="back_from_set"):
+            st.session_state["open_set"] = None
+            st.rerun()
+
+        collection_set = next(
+            (
+                collection_set
+                for group in saved_groups
+                for collection_set in group["sets"]
+                if collection_set["id"] == set_id
+            ),
+            None
+        )
+
+        if collection_set is None:
+            st.error("This set could not be found.")
+            return
+
+        words = load_set_words(set_id)
+        word_bank = load_flashcards()
+
+        st.header(collection_set["title"])
+        st.caption(f"{len(words)} vocabulary cards")
+
+        st.button(
+            "🌸 Study Set",
+            key=f"study_set_{set_id}",
+            type="primary",
+            on_click=start_study_session,
+            args=(set_id, words)
+        )
+
+        if not words:
+            st.info("This set has no vocabulary yet.")
+            return
+
+        if "selected_vocab" not in st.session_state:
+            st.session_state["selected_vocab"] = words[0]["word"]
+
+        left, right = st.columns([1, 2], gap="large")
+
+        with left:
+            search = st.text_input(
+                "Search vocabulary",
+                key="set_vocab_search"
+            )
+
+            for entry in words:
+                word = entry["word"]
+
+                if search and search.lower() not in word.lower():
+                    continue
+
+                if st.button(
+                    word,
+                    key=f"select_vocab_{set_id}_{word}",
+                    use_container_width=True
+                ):
+                    st.session_state["selected_vocab"] = word
+                    st.session_state["screenshot_index"] = 0
+                    st.rerun()
+
+        with right:
+            selected = st.session_state["selected_vocab"]
+
+            entry = next(
+                (w for w in words if w["word"] == selected),
+                words[0]
+            )
+
+            st.subheader(entry["word"])
+            st.caption(entry["reading"])
+
+            st.markdown("**Definitions**")
+            for meaning_group in entry["meanings"]:
+                if isinstance(meaning_group, list):
+                    st.write(" · ".join(str(m) for m in meaning_group))
+                else:
+                    st.write(str(meaning_group))
+
+            contexts = word_bank.get(entry["word"], {}).get("contexts", [])
+
+            st.markdown("**Original Context**")
+
+            if contexts:
+                if "screenshot_index" not in st.session_state:
+                    st.session_state["screenshot_index"] = 0
+
+                index = st.session_state["screenshot_index"] % len(contexts)
+                context = contexts[index]
+
+                st.image(context["image"], use_container_width=True)
+                st.write(context["sentence"])
+
+                prev_col, count_col, next_col = st.columns([1, 2, 1])
+
+                with prev_col:
+                    if st.button("←", key="previous_screenshot"):
+                        st.session_state["screenshot_index"] = (
+                            index - 1
+                        ) % len(contexts)
+                        st.rerun()
+
+                with count_col:
+                    st.markdown(
+                        f"<div style='text-align:center;'>"
+                        f"Screenshot {index + 1} / {len(contexts)}"
+                        f"</div>",
+                        unsafe_allow_html=True
+                    )
+
+                with next_col:
+                    if st.button("→", key="next_screenshot"):
+                        st.session_state["screenshot_index"] = (
+                            index + 1
+                        ) % len(contexts)
+                        st.rerun()
+
+            else:
+                st.info("No screenshots saved for this word.")
+
+        return
+
     if st.session_state["open_deck"] is not None:
         deck = next(
             (
@@ -478,6 +622,8 @@ def show_collections():
 
 
         return
+
+    
 
     with st.container(key="library_add_menu"):
         with st.popover("＋", help="Add a deck or set"):
@@ -591,3 +737,5 @@ def show_collections():
                 st.rerun()
 
             st.caption(f"Sets: {len(sets)}")
+
+
