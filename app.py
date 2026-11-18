@@ -37,6 +37,7 @@ button[kind="primary"]:hover {
     border-radius: 12px;
     padding: 16px 20px;
     margin: 0;
+    text-align: center;
 }
 
 .jq-answer-reading {
@@ -70,6 +71,7 @@ button[kind="primary"]:hover {
     line-height: 1.7;
     margin-bottom: 8px;
 }
+
 </style>
 """, unsafe_allow_html=True)
 from PIL import Image
@@ -83,6 +85,7 @@ from dictionary_test import get_definitions #fetches definitions for Japanese wo
 import html
 from database import (init_db, save_flashcard, load_flashcards, update_context_sentences, delete_word, delete_context, load_groups, add_word_to_set)
 from reading_input import instant_reading_input
+from keyboard_shortcuts import keyboard_shortcuts
 @st.cache_resource
 def load_reader():
     return easyocr.Reader(["ja"], gpu=False) #initialize the reader with Japanese language recognition, use cpu
@@ -569,6 +572,43 @@ elif mode == "Review":
 
         current_word = words[st.session_state["card_index"]]
 
+        shortcut = keyboard_shortcuts(
+            flipped=st.session_state["card_flipped"],
+            studying=st.session_state.get("study_set_id") is not None,
+        )
+
+        if shortcut:
+            action = shortcut.split(":")[0]
+            action_id = shortcut
+
+            if st.session_state.get("last_shortcut") != action_id:
+                st.session_state["last_shortcut"] = action_id
+
+                if action == "flip":
+                    st.session_state["card_flipped"] = not st.session_state["card_flipped"]
+                    st.rerun()
+
+
+                elif action == "rate" and st.session_state["card_flipped"]:
+                    rating = shortcut.split(":")[1]
+
+                    if st.session_state.get("study_set_id") is not None:
+                        queue = st.session_state["study_queue"]
+
+                        if queue:
+                            current = queue.pop(0)
+
+                            if rating == "Again":
+                                queue.append(current)
+
+                            st.session_state["card_index"] = 0
+                            st.session_state["context_index"] = 0
+                            st.session_state["card_flipped"] = False
+                            st.session_state["reading_input"] = ""
+                            st.rerun()
+
+        
+
         info = word_bank[current_word]
 
         if st.session_state.get("study_set_id") is not None:
@@ -580,13 +620,21 @@ elif mode == "Review":
         left_space, card_col, right_space = st.columns([1, 4, 1])
 
         with card_col:
-            with st.container(border=True):
+            with st.container(
+                border=True,
+                height=650
+            ):
                 contexts = info.get("contexts", [])
 
                 if st.session_state["card_flipped"]:
                     reading = katakana_to_hiragana(info["reading"])
 
-                    left, right = st.columns([3, 4], gap="large")
+                    show_context = st.session_state.get("show_card_context", True)
+
+                    if show_context:
+                        left, right = st.columns([3, 4], gap="large")
+                    else:
+                        left_space, left, right_space = st.columns([1, 3, 1])
 
                     with left:
                         definitions = "".join(
@@ -607,42 +655,51 @@ elif mode == "Review":
                             unsafe_allow_html=True
                         )
 
-                    with right:
-                        if contexts:
-                            st.session_state["context_index"] %= len(contexts)
-                            context = contexts[st.session_state["context_index"]]
+                    if show_context:
+                        with right:
+                            if contexts:
+                                st.session_state["context_index"] %= len(contexts)
+                                context = contexts[st.session_state["context_index"]]
 
-                            if context["image"] is not None:
-                                st.image(context["image"], use_container_width=True)
+                                if context["image"] is not None:
+                                    st.image(context["image"], use_container_width=True)
 
-                            st.markdown("**Example Sentence**")
+                                st.markdown("**Example Sentence**")
 
-                            st.markdown(
-                                highlight_word(
-                                    context["sentence"],
-                                    context.get("surface", current_word)
-                                ),
-                                unsafe_allow_html=True
-                            )
-
-                            if len(contexts) > 1:
-                                st.caption(
-                                    f"Screenshot {st.session_state['context_index'] + 1} / {len(contexts)}"
+                                st.markdown(
+                                    highlight_word(
+                                        context["sentence"],
+                                        context.get("surface", current_word)
+                                    ),
+                                    unsafe_allow_html=True
                                 )
 
+                                if len(contexts) > 1:
+                                    st.caption(
+                                        f"Screenshot {st.session_state['context_index'] + 1} / {len(contexts)}"
+                                    )
+
                 else:
-                    left, right = st.columns([1, 1], gap="large")
+                    show_context = st.session_state.get("show_card_context", True)
+
+                    if show_context:
+                        left, right = st.columns([1, 1], gap="large")
+                    else:
+                        left_space, left, right_space = st.columns([1, 3, 1])
 
                     with left:
                         st.markdown(
                             f"<div style='font-size: 56px; font-weight: 700; "
-                            f"color: #F9A8D4; margin-bottom: 24px;'>"
+                            f"color: #F9A8D4; margin-top: 65px; "
+                            f"margin-bottom: 24px; text-align: center;'>"
                             f"{html.escape(current_word)}</div>",
                             unsafe_allow_html=True
                         )
 
                         st.session_state["correct_reading"] = info["reading"]
 
+                        st.markdown("<div style='height: 65px;'></div>", unsafe_allow_html=True)
+                        
                         matched = instant_reading_input(
                             info["reading"],
                             key=f"reading_{current_word}"
@@ -652,35 +709,33 @@ elif mode == "Review":
                             st.session_state["card_flipped"] = True
                             st.rerun()
 
-                    with right:
-                        if contexts:
-                            st.session_state["context_index"] %= len(contexts)
-                            context = contexts[st.session_state["context_index"]]
+                    if show_context:
+                        with right:
+                            if contexts:
+                                st.session_state["context_index"] %= len(contexts)
+                                context = contexts[st.session_state["context_index"]]
 
-                            if context["image"] is not None:
-                                st.image(
-                                    context["image"],
-                                    use_container_width=True
+                                if context["image"] is not None:
+                                    st.image(
+                                        context["image"],
+                                        use_container_width=True
+                                    )
+
+                                st.markdown("**Example Sentence**")
+                                st.markdown(
+                                    highlight_word(
+                                        context["sentence"],
+                                        context.get("surface", current_word)
+                                    ),
+                                    unsafe_allow_html=True
                                 )
-
-                            st.markdown("**Example Sentence**")
-                            st.markdown(
-                                highlight_word(
-                                    context["sentence"],
-                                    context.get("surface", current_word)
-                                ),
-                                unsafe_allow_html=True
-                            )
 
                 if st.session_state.get("study_set_id") is None:
 
-                    left_group, center_group, right_group = st.columns([2, 3, 2], vertical_alignment="center")
+                    left_group, right_group = st.columns([1, 1], vertical_alignment="center")
 
                     with left_group:
                         first_col, previous_col = st.columns(2, gap="small")
-
-                    with center_group:
-                        flip_col = st.container()
 
                     with right_group:
                         next_col, last_col = st.columns(2, gap="small")
@@ -699,11 +754,6 @@ elif mode == "Review":
                             st.session_state["card_flipped"] = False
                             st.rerun()
 
-                    with flip_col:
-                        if st.button("Flip Card", type="primary", use_container_width=True):
-                            st.session_state["card_flipped"] = not st.session_state["card_flipped"]
-                            st.rerun()
-
                     with next_col:
                         if st.button("Next →", disabled=st.session_state["card_index"] == len(words) - 1, use_container_width=True):
                             st.session_state["context_index"] = 0
@@ -718,15 +768,6 @@ elif mode == "Review":
                             st.session_state["card_flipped"] = False
                             st.rerun()
                 else:
-                    if st.button(
-                        "Flip Card",
-                        type="primary",
-                        use_container_width=True,
-                        key="study_flip"
-                    ):
-                        st.session_state["card_flipped"] = not st.session_state["card_flipped"]
-                        st.rerun()
-
                     if st.session_state["card_flipped"]:
                         rating_cols = st.columns(4)
 
@@ -751,6 +792,36 @@ elif mode == "Review":
                                     st.session_state["card_flipped"] = False
                                     st.session_state["reading_input"] = ""
                                     st.rerun()
+
+
+    st.markdown(
+        """
+        <div style="
+            text-align: center;
+            color: #999999;
+            font-size: 12px;
+            padding: 16px 0;
+            opacity: 0.75;
+        ">
+            Flip: <span style="color: #F9A8D4;">F / ↑ / ↓</span>
+            &nbsp;&nbsp;·&nbsp;&nbsp;
+            Again: <span style="color: #F9A8D4;">1</span>
+            &nbsp;&nbsp;·&nbsp;&nbsp;
+            Hard: <span style="color: #F9A8D4;">2</span>
+            &nbsp;&nbsp;·&nbsp;&nbsp;
+            Good: <span style="color: #F9A8D4;">3</span>
+            &nbsp;&nbsp;·&nbsp;&nbsp;
+            Easy: <span style="color: #F9A8D4;">4 / Space / Enter</span>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
+    st.toggle(
+        "Show context",
+        value=True,
+        key="show_card_context",
+    )
 
     with st.expander(f"Saved Vocabulary ({len(word_bank)})", expanded=st.session_state["vocab_expanded"]):
         with st.container(height=350, border=False):
