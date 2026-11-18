@@ -29,6 +29,47 @@ button[kind="primary"]:hover {
     border-color: rgba(244, 114, 182, 0.50) !important;
     color: #F9A8D4 !important;
 }
+
+/* Kanshudo-inspired revealed flashcard */
+.jq-answer {
+    background: rgba(255, 246, 184, 0.10);
+    border: 1px solid rgba(244, 211, 119, 0.22);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 0;
+}
+
+.jq-answer-reading {
+    color: #F9A8D4;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.jq-answer-word {
+    color: #F9A8D4;
+    font-size: 38px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.jq-answer-divider {
+    border-top: 1px solid rgba(244, 211, 119, 0.20);
+    margin-bottom: 16px;
+}
+
+.jq-answer-label {
+    color: #C9A86C;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+}
+
+.jq-definition {
+    font-size: 19px;
+    line-height: 1.7;
+    margin-bottom: 8px;
+}
 </style>
 """, unsafe_allow_html=True)
 from PIL import Image
@@ -57,6 +98,13 @@ def katakana_to_hiragana(text): #changes katakana to hiragana
             result += char
 
     return result
+
+def check_reading():
+    typed = st.session_state.get("reading_input", "").strip()
+    correct = st.session_state.get("correct_reading", "")
+
+    if katakana_to_hiragana(typed) == katakana_to_hiragana(correct):
+        st.session_state["card_flipped"] = True
 
 def highlight_word(sentence, surface): #highlights the surface form of a word for easier readability
     safe_sentence = html.escape(sentence)
@@ -475,13 +523,34 @@ if mode == "Create":
             st.divider()
 
 elif mode == "Review":
-    st.subheader("Flashcards")
     word_bank = st.session_state["word_bank"]
+
+    study_words = st.session_state.get("study_set_words")
+
+    if study_words is not None:
+        word_bank = {
+            word: info
+            for word, info in word_bank.items()
+            if word in study_words
+        }
+        st.subheader("Study Set")
+        if st.button("← Exit Set Study"):
+            st.session_state.pop("study_set_words", None)
+            st.session_state.pop("study_set_id", None)
+            st.session_state["card_index"] = 0
+            st.session_state["context_index"] = 0
+            st.session_state["card_flipped"] = False
+            st.rerun()
+    else:
+        st.subheader("Flashcards")
     
     if not word_bank:
         st.info("Save some vocabulary to start reviewing!")
     else:
-        words = list(word_bank.keys())
+        if st.session_state.get("study_set_id") is not None:
+            words = st.session_state.get("study_queue", [])
+        else:
+            words = list(word_bank.keys())
         if "card_index" not in st.session_state:
             st.session_state["card_index"] = 0
 
@@ -491,88 +560,194 @@ elif mode == "Review":
         if "context_index" not in st.session_state:
             st.session_state["context_index"] = 0
 
+        if not words:
+            st.success("No more cards left for this session 🌸")
+            st.stop()
+
         st.session_state["card_index"] %= len(words)
 
         current_word = words[st.session_state["card_index"]]
 
         info = word_bank[current_word]
 
-        st.write(f"Card {st.session_state['card_index'] + 1} of {len(words)}")
+        if st.session_state.get("study_set_id") is not None:
+            remaining = len(st.session_state["study_queue"])
+            st.caption(f"🌸 {remaining} cards remaining")
+        else:
+            st.write(f"Card {st.session_state['card_index'] + 1} of {len(words)}")
 
         left_space, card_col, right_space = st.columns([1, 4, 1])
 
         with card_col:
             with st.container(border=True):
-                st.markdown(f"### {current_word}")
                 contexts = info.get("contexts", [])
 
-                if contexts:
-                    st.session_state["context_index"] %= len(contexts)
-                    context = contexts[st.session_state["context_index"]]
-
-                    if context["image"] is not None:
-                        st.image(context["image"], use_container_width=True)
-                if contexts:
-                    st.write("**Example Sentences**")
-                    with st.container(key="review_examples"):
-                        for number, example in enumerate(contexts):
-                            if st.button(
-                                example["sentence"].replace(example.get("surface", current_word), f"**{example.get('surface', current_word)}**"),
-                                key=f"context_{current_word}_{number}",
-                                use_container_width=True
-                            ):
-                                st.session_state["context_index"] = number
-                                st.rerun()
                 if st.session_state["card_flipped"]:
                     reading = katakana_to_hiragana(info["reading"])
-                    st.write(f"**Reading:** {reading}")
 
-                    for sense in info["meanings"][:3]:
-                        st.write("; ".join(sense))
+                    left, right = st.columns([3, 4], gap="large")
 
-                left_group, center_group, right_group = st.columns([2, 3, 2], vertical_alignment="center")
+                    with left:
+                        definitions = "".join(
+                            f"<div class='jq-definition'>{html.escape('; '.join(sense))}</div>"
+                            for sense in info["meanings"][:3]
+                        )
 
-                with left_group:
-                    first_col, previous_col = st.columns(2, gap="small")
+                        st.markdown(
+                            f"""
+                            <div class="jq-answer">
+                                <div class="jq-answer-reading">{html.escape(reading)}</div>
+                                <div class="jq-answer-word">{html.escape(current_word)}</div>
+                                <div class="jq-answer-divider"></div>
+                                <div class="jq-answer-label">MEANING</div>
+                                {definitions}
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
 
-                with center_group:
-                    flip_col = st.container()
+                    with right:
+                        if contexts:
+                            st.session_state["context_index"] %= len(contexts)
+                            context = contexts[st.session_state["context_index"]]
 
-                with right_group:
-                    next_col, last_col = st.columns(2, gap="small")
+                            if context["image"] is not None:
+                                st.image(context["image"], use_container_width=True)
 
-                with first_col:
-                    if st.button("⏮ First", disabled=st.session_state["card_index"] == 0, use_container_width=True):
-                        st.session_state["context_index"] = 0
-                        st.session_state["card_index"] = 0 
-                        st.session_state["card_flipped"] = False
-                        st.rerun()
+                            st.markdown("**Example Sentence**")
 
-                with previous_col:
-                    if st.button("← Prev", disabled=st.session_state["card_index"] == 0, use_container_width=True):
-                        st.session_state["context_index"] = 0
-                        st.session_state["card_index"] -= 1
-                        st.session_state["card_flipped"] = False
-                        st.rerun()
+                            st.markdown(
+                                highlight_word(
+                                    context["sentence"],
+                                    context.get("surface", current_word)
+                                ),
+                                unsafe_allow_html=True
+                            )
 
-                with flip_col:
-                    if st.button("Flip Card", type="primary", use_container_width=True):
+                            if len(contexts) > 1:
+                                st.caption(
+                                    f"Screenshot {st.session_state['context_index'] + 1} / {len(contexts)}"
+                                )
+
+                else:
+                    left, right = st.columns([1, 1], gap="large")
+
+                    with left:
+                        st.markdown(
+                            f"<div style='font-size: 56px; font-weight: 700; "
+                            f"color: #F9A8D4; margin-bottom: 24px;'>"
+                            f"{html.escape(current_word)}</div>",
+                            unsafe_allow_html=True
+                        )
+
+                        st.session_state["correct_reading"] = info["reading"]
+
+                        st.text_input(
+                            "Type the reading",
+                            key="reading_input",
+                            placeholder="ひらがなで入力...",
+                            on_change=check_reading
+                        )
+
+                    with right:
+                        if contexts:
+                            st.session_state["context_index"] %= len(contexts)
+                            context = contexts[st.session_state["context_index"]]
+
+                            if context["image"] is not None:
+                                st.image(
+                                    context["image"],
+                                    use_container_width=True
+                                )
+
+                            st.markdown("**Example Sentence**")
+                            st.markdown(
+                                highlight_word(
+                                    context["sentence"],
+                                    context.get("surface", current_word)
+                                ),
+                                unsafe_allow_html=True
+                            )
+
+                if st.session_state.get("study_set_id") is None:
+
+                    left_group, center_group, right_group = st.columns([2, 3, 2], vertical_alignment="center")
+
+                    with left_group:
+                        first_col, previous_col = st.columns(2, gap="small")
+
+                    with center_group:
+                        flip_col = st.container()
+
+                    with right_group:
+                        next_col, last_col = st.columns(2, gap="small")
+
+                    with first_col:
+                        if st.button("⏮ First", disabled=st.session_state["card_index"] == 0, use_container_width=True):
+                            st.session_state["context_index"] = 0
+                            st.session_state["card_index"] = 0 
+                            st.session_state["card_flipped"] = False
+                            st.rerun()
+
+                    with previous_col:
+                        if st.button("← Prev", disabled=st.session_state["card_index"] == 0, use_container_width=True):
+                            st.session_state["context_index"] = 0
+                            st.session_state["card_index"] -= 1
+                            st.session_state["card_flipped"] = False
+                            st.rerun()
+
+                    with flip_col:
+                        if st.button("Flip Card", type="primary", use_container_width=True):
+                            st.session_state["card_flipped"] = not st.session_state["card_flipped"]
+                            st.rerun()
+
+                    with next_col:
+                        if st.button("Next →", disabled=st.session_state["card_index"] == len(words) - 1, use_container_width=True):
+                            st.session_state["context_index"] = 0
+                            st.session_state["card_index"] += 1
+                            st.session_state["card_flipped"] = False
+                            st.rerun()
+
+                    with last_col:
+                        if st.button("Last ⏭", disabled=st.session_state["card_index"] == len(words) - 1, use_container_width=True):
+                            st.session_state["context_index"] = 0
+                            st.session_state["card_index"] = len(words) - 1
+                            st.session_state["card_flipped"] = False
+                            st.rerun()
+                else:
+                    if st.button(
+                        "Flip Card",
+                        type="primary",
+                        use_container_width=True,
+                        key="study_flip"
+                    ):
                         st.session_state["card_flipped"] = not st.session_state["card_flipped"]
                         st.rerun()
 
-                with next_col:
-                    if st.button("Next →", disabled=st.session_state["card_index"] == len(words) - 1, use_container_width=True):
-                        st.session_state["context_index"] = 0
-                        st.session_state["card_index"] += 1
-                        st.session_state["card_flipped"] = False
-                        st.rerun()
+                    if st.session_state["card_flipped"]:
+                        rating_cols = st.columns(4)
 
-                with last_col:
-                    if st.button("Last ⏭", disabled=st.session_state["card_index"] == len(words) - 1, use_container_width=True):
-                        st.session_state["context_index"] = 0
-                        st.session_state["card_index"] = len(words) - 1
-                        st.session_state["card_flipped"] = False
-                        st.rerun()
+                        for col, rating in zip(
+                            rating_cols,
+                            ["Again", "Hard", "Good", "Easy"]
+                        ):
+                            with col:
+                                if st.button(
+                                    rating,
+                                    key=f"rate_{rating}",
+                                    use_container_width=True
+                                ):
+                                    queue = st.session_state["study_queue"]
+                                    current = queue.pop(0)
+
+                                    if rating == "Again":
+                                        queue.append(current)
+
+                                    st.session_state["card_index"] = 0
+                                    st.session_state["context_index"] = 0
+                                    st.session_state["card_flipped"] = False
+                                    st.session_state["reading_input"] = ""
+                                    st.rerun()
 
     with st.expander(f"Saved Vocabulary ({len(word_bank)})", expanded=st.session_state["vocab_expanded"]):
         with st.container(height=350, border=False):
