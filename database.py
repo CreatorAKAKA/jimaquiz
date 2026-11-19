@@ -2,6 +2,7 @@ import sqlite3
 from pathlib import Path
 import json
 import hashlib
+from datetime import datetime, timedelta, timezone
 
 
 DB_PATH = Path(__file__).parent / "jimaquiz.db"
@@ -60,6 +61,20 @@ def init_db():
                 PRIMARY KEY (set_id, word_id),
                 FOREIGN KEY (set_id) REFERENCES collection_sets(id)
                     ON DELETE CASCADE,
+                FOREIGN KEY (word_id) REFERENCES words(id)
+                    ON DELETE CASCADE
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS word_reviews (
+                word_id INTEGER PRIMARY KEY,
+                due_at TEXT NOT NULL,
+                stability REAL NOT NULL DEFAULT 0,
+                difficulty REAL NOT NULL DEFAULT 0,
+                review_count INTEGER NOT NULL DEFAULT 0,
+                lapses INTEGER NOT NULL DEFAULT 0,
+                last_reviewed_at TEXT,
+                state TEXT NOT NULL DEFAULT 'new',
                 FOREIGN KEY (word_id) REFERENCES words(id)
                     ON DELETE CASCADE
             )
@@ -365,11 +380,84 @@ def load_saved_words():
 
         return [row[0] for row in rows]
 
+def load_word_review(word):
+    """Load SRS progress for a vocabulary word."""
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.row_factory = sqlite3.Row
+
+        row = conn.execute(
+            """
+            SELECT wr.*
+            FROM word_reviews AS wr
+            JOIN words AS w ON wr.word_id = w.id
+            WHERE w.word = ?
+            """,
+            (word,)
+        ).fetchone()
+
+        return dict(row) if row else None
+
+def rate_word(word, rating):
+    """Update a word's review progress."""
+
+    if rating not in ("Not yet", "Only just", "Easy"):
+        raise ValueError(f"Invalid rating: {rating}")
+
+    now = datetime.now(timezone.utc)
+    previous = load_word_review(word)
+
+    if rating == "Not yet":
+        review_count = 0
+        lapses = (previous["lapses"] if previous else 0) + 1
+        days = 0
+        state = "new"
+
+    else:
+        review_count = (previous["review_count"] if previous else 0) + 1
+        lapses = previous["lapses"] if previous else 0
+
+        if rating == "Only just":
+            days = 1
+        else:
+            days = min(365, 3 * (2 ** (review_count - 1)))
+
+        state = "review"
+
+    due_at = now + timedelta(days=days)
+
+    with sqlite3.connect(DB_PATH) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        conn.execute(
+            """
+            INSERT INTO word_reviews (
+                word_id, due_at, review_count, lapses,
+                last_reviewed_at, state
+            )
+            SELECT id, ?, ?, ?, ?, ?
+            FROM words
+            WHERE word = ?
+            ON CONFLICT(word_id) DO UPDATE SET
+                due_at = excluded.due_at,
+                review_count = excluded.review_count,
+                lapses = excluded.lapses,
+                last_reviewed_at = excluded.last_reviewed_at,
+                state = excluded.state
+            """,
+            (
+                due_at.isoformat(),
+                review_count,
+                lapses,
+                now.isoformat(),
+                state,
+                word,
+            )
+        )
+
+    return due_at
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized!")
     save_word(
-        "食べる",
-        "たべる",
-        [["to eat"], ["to consume"]]
+        "不思議"
     )
