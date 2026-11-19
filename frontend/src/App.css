@@ -1,0 +1,306 @@
+
+.flashcard {
+  width: 100%;
+  max-width: 850px;
+  height: 640px;
+  margin: 48px auto;
+  box-sizing: border-box;
+  background: #211e28;
+  border: 1px solid #453345;
+  border-radius: 20px;
+
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.flashcard-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 32px;
+  text-align: center;
+}
+
+.card-progress {
+  display: block;
+  color: #a9a0ad;
+  font-size: 13px;
+  margin-bottom: 60px;
+}
+
+.flashcard h2 {
+  color: #f9a8d4;
+  font-size: 64px;
+  margin: 0 0 28px;
+}
+
+.card-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card-answer p {
+  font-size: 20px;
+  margin: 0;
+}
+
+.flashcard button {
+  border: none;
+  border-radius: 8px;
+  color: white;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: filter 0.2s;
+}
+
+.flashcard button:hover {
+  filter: brightness(1.2);
+}
+
+.flashcard-content > button {
+  background: rgba(244, 114, 182, 0.25);
+  color: #f9a8d4;
+  margin-top: 24px;
+}
+
+.rating-footer {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 24px;
+  border-top: 1px solid #453345;
+  background: #211e28;
+}
+
+.rating-footer button {
+  min-width: 100px;
+}
+
+
+/* Sakura-themed translucent rating buttons */
+.snooze {
+  background: rgba(139, 130, 184, 0.22);
+  border: 1px solid rgba(139, 130, 184, 0.55) !important;
+  color: #c8bfe9 !important;
+}
+
+.not-yet {
+  background: rgba(215, 123, 157, 0.22);
+  border: 1px solid rgba(215, 123, 157, 0.55) !important;
+  color: #f0a8c1 !important;
+}
+
+.only-just {
+  background: rgba(185, 154, 219, 0.22);
+  border: 1px solid rgba(185, 154, 219, 0.55) !important;
+  color: #dcc4f3 !important;
+}
+
+.easy {
+  background: rgba(244, 163, 196, 0.22);
+  border: 1px solid rgba(244, 163, 196, 0.55) !important;
+  color: #f9c4d9 !important;
+}
+
+.rating-footer button {
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.rating-footer button:hover {
+  filter: none;
+  transform: translateY(-2px);
+  background: rgba(244, 163, 196, 0.30);
+}
+
+.reading-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+}
+
+.reading-section input {
+  width: min(100%, 300px);
+  box-sizing: border-box;
+  padding: 14px 18px;
+  background: #17141c;
+  border: 1px solid #554052;
+  border-radius: 10px;
+  color: #f9a8d4;
+  font-size: 22px;
+  text-align: center;
+  outline: none;
+}
+
+.reading-section input:focus {
+  border-color: #f472b6;
+}
+
+.reading-section button {
+  background: rgba(244, 114, 182, 0.15);
+  color: #f9a8d4;
+  border: 1px solid rgba(244, 114, 182, 0.3);
+}
+
+
+/* Two-column vocabulary and context layout */
+.card-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+.vocabulary-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 55px;
+}
+
+.vocabulary-side h2 {
+  overflow-wrap: anywhere;
+}
+
+.context-side {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.screenshot-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #17141c;
+  border: 1px solid #453345;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.screenshot-placeholder img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.screenshot-placeholder span {
+  font-size: 30px;
+}
+
+.screenshot-placeholder p {
+  font-size: 12px;
+  color: #a9a0ad;
+}
+
+.example-sentence {
+  text-align: left;
+  background: rgba(244, 114, 182, 0.05);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.example-sentence span {
+  font-size: 11px;
+  letter-spacing: 1px;
+  color: #f9a8d4;
+}
+
+.example-sentence p {
+  font-size: 17px;
+  line-height: 1.7;
+  margin: 10px 0 0;
+}
+
+.card-answer .reading {
+  color: #f9a8d4;
+}
+
+.card-answer .meaning {
+  line-height: 1.6;
+}
+
+/* Stack columns on narrow screens */
+@media (max-width: 650px) {
+  .card-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .vocabulary-side {
+    padding-top: 12px;
+  }
+
+  .rating-footer {
+    flex-wrap: wrap;
+  }
+
+  .rating-footer button {
+    min-width: 0;
+    flex: 1 1 40%;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 480px;
+  gap: 16px;
+  text-align: center;
+}
+
+.empty-state-icon {
+  font-size: 56px;
+}
+
+.empty-state h2 {
+  font-size: 36px;
+  color: #f9a8d4;
+  margin: 0;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 20px;
+}
+
+.empty-state-subtitle {
+  max-width: 380px;
+  color: #a9a0ad;
+  font-size: 14px !important;
+  line-height: 1.8;
+}
+
+.app-navigation {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px;
+}
+
+.app-navigation button {
+  background: rgba(244, 163, 196, 0.12);
+  border: 1px solid rgba(244, 163, 196, 0.3);
+  color: #f9a8d4;
+  border-radius: 10px;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.app-navigation button:hover {
+  background: rgba(244, 163, 196, 0.25);
+  transform: translateY(-2px);
+}

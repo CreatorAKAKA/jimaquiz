@@ -411,17 +411,20 @@ def rate_word(word, rating):
         lapses = (previous["lapses"] if previous else 0) + 1
         days = 0
         state = "new"
-
+    
     else:
-        review_count = (previous["review_count"] if previous else 0) + 1
+        review_count = previous["review_count"] if previous else 0
         lapses = previous["lapses"] if previous else 0
 
         if rating == "Only just":
             days = 1
+
         else:
-            days = min(365, 3 * (2 ** (review_count - 1)))
+            review_count += 1
+            days = min(365, 2 * (1.5 ** (review_count - 1)))
 
         state = "review"
+
 
     due_at = now + timedelta(days=days)
 
