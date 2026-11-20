@@ -6,7 +6,7 @@ import sqlite3
 from fastapi import Response
 from database import DB_PATH, save_set_image, load_set_image
 
-from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words
+from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words, load_set_progress
 from fastapi import FastAPI, HTTPException, UploadFile, File
 from datetime import datetime, timezone
 from pydantic import BaseModel
@@ -87,6 +87,21 @@ def submit_rating(request: RatingRequest):
 @app.get("/api/collections")
 def get_collections():
     return load_groups()
+
+@app.get("/api/collections/sets/{set_id}/progress")
+def get_set_progress(set_id: int):
+    groups = load_groups()
+
+    set_exists = any(
+        collection_set["id"] == set_id
+        for group in groups
+        for collection_set in group["sets"]
+    )
+
+    if not set_exists:
+        raise HTTPException(status_code=404, detail="Set not found")
+
+    return load_set_progress(set_id)
 
 @app.post("/api/collections/sets/{set_id}/images/{image_type}")
 async def upload_set_image(

@@ -1,0 +1,36 @@
+
+.progress-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.progress-badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 完璧 — Sage green */
+.progress-badge.mastered {
+  color: #A7D5B5;
+  background: rgba(167, 213, 181, 0.10);
+  border: 1px solid rgba(167, 213, 181, 0.45);
+}
+
+/* まだ — Champagne yellow */
+.progress-badge.learning {
+  color: #E9C78D;
+  background: rgba(233, 199, 141, 0.10);
+  border: 1px solid rgba(233, 199, 141, 0.45);
+}
+
+/* 全然 — Dusty rose */
+.progress-badge.new {
+  color: #E6A6B5;
+  background: rgba(230, 166, 181, 0.10);
+  border: 1px solid rgba(230, 166, 181, 0.45);
+}

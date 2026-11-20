@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import './Collections.css'
 import SetPage from './SetPage'
+import ProgressBadges, { type SetProgress } from './ProgressBadges'
 
 type CollectionSet = {
   id: number
@@ -25,6 +26,7 @@ function Collections({ onStudySet }: CollectionsProps) {
   const [animating, setAnimating] = useState<Record<number, boolean>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [setProgress, setSetProgress] = useState<Record<number, SetProgress>>({})
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/collections')
@@ -36,6 +38,34 @@ function Collections({ onStudySet }: CollectionsProps) {
       .catch(() => setError('Could not load collections'))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (groups.length === 0) return
+
+    const sets = groups.flatMap((group) => group.sets)
+
+    Promise.all(
+        sets.map(async (set) => {
+        const response = await fetch(
+            `http://127.0.0.1:8000/api/collections/sets/${set.id}/progress`
+        )
+
+        if (!response.ok) {
+            throw new Error(`Failed to load progress for set ${set.id}`)
+        }
+
+        const progress: SetProgress = await response.json()
+
+        return [set.id, progress] as const
+        })
+    )
+        .then((results) => {
+        setSetProgress(Object.fromEntries(results))
+        })
+        .catch((error) => {
+        console.error('Could not load collection progress:', error)
+        })
+    }, [groups])
 
   
   
@@ -59,7 +89,10 @@ function Collections({ onStudySet }: CollectionsProps) {
       <SetPage
         setId={selectedSet.id}
         title={selectedSet.title}
-        onBack={() => setSelectedSet(null)}
+        onBack={() => {
+            setSelectedSet(null)
+            setGroups((previous) => [...previous])
+            }}
         onStudy={(setId) => onStudySet?.(setId)}
       />
     )
@@ -99,10 +132,8 @@ function Collections({ onStudySet }: CollectionsProps) {
                         </div>
 
                         <div className="set-card-footer">
-                        <span>完璧</span>
-                        <span>まだ</span>
-                        <span>全然</span>
-                        </div>
+                            <ProgressBadges progress={setProgress[thirdSet.id]} />
+                            </div>
                     </div>
                     )}
                 {group.sets.length > 1 && (
@@ -118,10 +149,8 @@ function Collections({ onStudySet }: CollectionsProps) {
                     </div>
 
                     <div className="set-card-footer">
-                        <span>完璧</span>
-                        <span>まだ</span>
-                        <span>全然</span>
-                    </div>
+                        <ProgressBadges progress={setProgress[nextSet.id]} />
+                        </div>
                     </div>
                 )}
 
@@ -183,10 +212,8 @@ function Collections({ onStudySet }: CollectionsProps) {
                     </div>
 
                     <div className="set-card-footer">
-                      <span>完璧</span>
-                      <span>まだ</span>
-                      <span>全然</span>
-                    </div>
+                        <ProgressBadges progress={setProgress[currentSet.id]} />
+                        </div>
                   </>
                 ) : (
                   <p className="empty-deck">No sets yet</p>

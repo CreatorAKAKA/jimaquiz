@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { toHiragana } from 'wanakana'
 import './SetPage.css'
+import ProgressBadges, { type SetProgress } from './ProgressBadges'
 
 
 type SetWord = {
@@ -12,6 +13,7 @@ type SetWord = {
   due_at: string | null
   review_state: string
 }
+
 
 function formatDueDate(dueAt: string | null): string {
   if (!dueAt) return 'New'
@@ -70,6 +72,7 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
   const [editorPosition, setEditorPosition] = useState({ x: 0, y: 0 })
   const [editorError, setEditorError] = useState('')
   const [savingImage, setSavingImage] = useState(false)
+  const [progress, setProgress] = useState<SetProgress | null>(null)
   
   const editorCanvasRef = useRef<HTMLCanvasElement>(null)
   const editorImageRef = useRef<HTMLImageElement | null>(null)
@@ -223,6 +226,18 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
       .catch(() => setError('Could not load set vocabulary'))
       .finally(() => setLoading(false))
   }, [setId])
+
+  useEffect(() => {
+    setProgress(null)
+
+    fetch(`http://127.0.0.1:8000/api/collections/sets/${setId}/progress`)
+        .then((response) => {
+        if (!response.ok) throw new Error('Failed to load progress')
+        return response.json()
+        })
+        .then((data: SetProgress) => setProgress(data))
+        .catch((error) => console.error(error))
+    }, [setId])
 
   useEffect(() => {
     if (!editingImage) return
@@ -440,12 +455,7 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
 
         <div className="set-page-info">
             <h1>{title}</h1>
-
-            <div className="set-progress">
-                <span>完璧 {words.filter(w => w.review_state === 'mastered').length}</span>
-                <span>まだ {words.filter(w => w.review_state === 'learning').length}</span>
-                <span>全然 {words.filter(w => w.review_state === 'new').length}</span>
-            </div>
+            <ProgressBadges progress={progress} />
             </div>
 
             <button

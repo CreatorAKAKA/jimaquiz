@@ -532,17 +532,69 @@
 
 .set-progress {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-top: 10px;
   flex-wrap: wrap;
 }
 
 .set-progress span {
   padding: 5px 14px;
-  border: 1px solid #795c73;
   border-radius: 999px;
-  color: #c7adbe;
   font-size: 12px;
-  white-space: nowrap;
+  font-weight: 600;
+}
+
+.set-progress span:nth-child(1) {
+  color: #A7D5B5;
+  background: rgba(167, 213, 181, 0.10);
+  border: 1px solid rgba(167, 213, 181, 0.45);
+}
+
+.set-progress span:nth-child(2) {
+  color: #E9C78D;
+  background: rgba(233, 199, 141, 0.10);
+  border: 1px solid rgba(233, 199, 141, 0.45);
+}
+
+.set-progress span:nth-child(3) {
+  color: #E6A6B5;
+  background: rgba(230, 166, 181, 0.10);
+  border: 1px solid rgba(230, 166, 181, 0.45);
+}
+
+/* Collection card progress indicators */
+
+.set-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.set-card-footer span {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 完璧 — Sage green */
+.set-card-footer span:nth-child(1) {
+  color: #A7D5B5;
+  background: rgba(167, 213, 181, 0.10);
+  border: 1px solid rgba(167, 213, 181, 0.45);
+}
+
+/* まだ — Champagne yellow */
+.set-card-footer span:nth-child(2) {
+  color: #E9C78D;
+  background: rgba(233, 199, 141, 0.10);
+  border: 1px solid rgba(233, 199, 141, 0.45);
+}
+
+/* 全然 — Dusty rose */
+.set-card-footer span:nth-child(3) {
+  color: #E6A6B5;
+  background: rgba(230, 166, 181, 0.10);
+  border: 1px solid rgba(230, 166, 181, 0.45);
 }

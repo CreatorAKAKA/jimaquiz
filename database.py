@@ -423,6 +423,37 @@ def load_saved_words():
 
         return [row[0] for row in rows]
 
+def load_set_progress(set_id):
+    """Count new, learning, and mastered words in a set."""
+    now = datetime.now(timezone.utc)
+    mastered = 0
+    learning = 0
+    new = 0
+
+    with sqlite3.connect(DB_PATH) as conn:
+        rows = conn.execute("""
+            SELECT wr.due_at, wr.last_reviewed_at, wr.state
+            FROM set_words AS sw
+            LEFT JOIN word_reviews AS wr ON sw.word_id = wr.word_id
+            WHERE sw.set_id = ?
+        """, (set_id,)).fetchall()
+
+    for due_at, last_reviewed_at, state in rows:
+        if last_reviewed_at is None:
+            new += 1
+        elif state == "review" and due_at and (
+            datetime.fromisoformat(due_at) - now
+        ) >= timedelta(days=30):
+            mastered += 1
+        else:
+            learning += 1
+
+    return {
+        "mastered": mastered,
+        "learning": learning,
+        "new": new,
+    }
+
 def load_word_review(word):
     """Load SRS progress for a vocabulary word."""
     with sqlite3.connect(DB_PATH) as conn:
