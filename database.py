@@ -3,6 +3,7 @@ from pathlib import Path
 import json
 import hashlib
 from datetime import datetime, timedelta, timezone
+from fsrs import Scheduler, Card, Rating, ReviewLog
 
 
 DB_PATH = Path(__file__).parent / "jimaquiz.db"
@@ -97,6 +98,22 @@ def init_db():
                     ON DELETE CASCADE
             )
         """)
+        review_columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(word_reviews)"
+            ).fetchall()
+        }
+
+        if "fsrs_card" not in review_columns:
+            conn.execute(
+                "ALTER TABLE word_reviews ADD COLUMN fsrs_card TEXT"
+            )
+
+        if "fsrs_history" not in review_columns:
+            conn.execute(
+                "ALTER TABLE word_reviews ADD COLUMN fsrs_history TEXT"
+            )
 
         
 
@@ -471,66 +488,92 @@ def load_word_review(word):
 
         return dict(row) if row else None
 
-def rate_word(word, rating):
-    """Update a word's review progress."""
 
-    if rating not in ("Not yet", "Only just", "Easy"):
+def rate_word(word, rating):
+    """Update a word's review progress using FSRS."""
+
+    rating_map = {
+        "Not yet": Rating.Again,
+        "Only just": Rating.Hard,
+        "Easy": Rating.Good,
+    }
+
+    if rating not in rating_map:
         raise ValueError(f"Invalid rating: {rating}")
 
-    now = datetime.now(timezone.utc)
     previous = load_word_review(word)
+    now = datetime.now(timezone.utc)
 
-    if rating == "Not yet":
-        review_count = 0
-        lapses = (previous["lapses"] if previous else 0) + 1
-        days = 0
-        state = "new"
-    
+    scheduler = Scheduler()
+
+    if previous and previous.get("fsrs_card"):
+        card = Card.from_json(previous["fsrs_card"])
     else:
-        review_count = previous["review_count"] if previous else 0
-        lapses = previous["lapses"] if previous else 0
+        card = Card()
 
-        if rating == "Only just":
-            days = 1
+    card, review_log = scheduler.review_card(
+        card,
+        rating_map[rating],
+        review_datetime=now,
+    )
 
-        else:
-            review_count += 1
-            days = min(365, 2 * (1.5 ** (review_count - 1)))
+    history = (
+        json.loads(previous["fsrs_history"])
+        if previous and previous.get("fsrs_history")
+        else []
+    )
 
-        state = "review"
+    history.append(review_log.to_json())
 
+    review_count = (
+        (previous["review_count"] if previous else 0)
+        + (1 if rating == "Easy" else 0)
+    )
 
-    due_at = now + timedelta(days=days)
+    lapses = (
+        (previous["lapses"] if previous else 0)
+        + (1 if rating == "Not yet" else 0)
+    )
+
+    state = "new" if rating == "Not yet" else "review"
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute(
-            """
+
+        conn.execute("""
             INSERT INTO word_reviews (
-                word_id, due_at, review_count, lapses,
-                last_reviewed_at, state
+                word_id, due_at, stability, difficulty,
+                review_count, lapses, last_reviewed_at,
+                state, fsrs_card, fsrs_history
             )
-            SELECT id, ?, ?, ?, ?, ?
+            SELECT id, ?, ?, ?, ?, ?, ?, ?, ?, ?
             FROM words
             WHERE word = ?
             ON CONFLICT(word_id) DO UPDATE SET
                 due_at = excluded.due_at,
+                stability = excluded.stability,
+                difficulty = excluded.difficulty,
                 review_count = excluded.review_count,
                 lapses = excluded.lapses,
                 last_reviewed_at = excluded.last_reviewed_at,
-                state = excluded.state
-            """,
-            (
-                due_at.isoformat(),
-                review_count,
-                lapses,
-                now.isoformat(),
-                state,
-                word,
-            )
-        )
+                state = excluded.state,
+                fsrs_card = excluded.fsrs_card,
+                fsrs_history = excluded.fsrs_history
+        """, (
+            card.due.isoformat(),
+            card.stability or 0,
+            card.difficulty or 0,
+            review_count,
+            lapses,
+            now.isoformat(),
+            state,
+            card.to_json(),
+            json.dumps(history),
+            word,
+        ))
 
-    return due_at
+    return card.due
+
 
 def save_set_image(set_id, image_type, image_data):
     """Save a cover or banner image for a set."""
