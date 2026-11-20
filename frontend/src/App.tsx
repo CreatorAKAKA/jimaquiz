@@ -9,6 +9,11 @@ type Vocabulary = {
   reading: string
   meanings: string[][]
   example: string
+  screenshot_id?: number | null
+  contexts?: {
+    screenshot_id: number
+    sentence: string
+  }[]
 }
 
 function App() {
@@ -43,6 +48,7 @@ function App() {
   const [totalCards, setTotalCards] = useState(0)
   const [snoozedWords, setSnoozedWords] = useState<string[]>([])
   const [flipped, setFlipped] = useState(false)
+  const [contextIndex, setContextIndex] = useState(0)
   const [readingInput, setReadingInput] = useState('')
 
 
@@ -82,6 +88,8 @@ function App() {
 
 
   const card = studyQueue[0]
+  const contexts = card?.contexts ?? []
+  const activeContext = contexts[contextIndex] ?? contexts[0]
 
   async function startSetStudy(setId: number) {
     setLoading(true)
@@ -171,6 +179,7 @@ async function rateCard(rating: string) {
     return remaining
   })
 
+  setContextIndex(0)
   setFlipped(false)
   setReadingInput('')
 }
@@ -277,14 +286,57 @@ async function rateCard(rating: string) {
             </section>
 
             <section className="context-side">
+              
+              
               <div className="screenshot-placeholder">
-                <span>🌸</span>
-                <p>Screenshot integration coming next</p>
+                {activeContext?.screenshot_id != null ? (
+                  <img
+                    src={`http://127.0.0.1:8000/api/screenshots/${activeContext.screenshot_id}`}
+                    alt={`Anime screenshot for ${card.word}`}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                    }}
+                  />
+                ) : (
+                  <p>No screenshot available</p>
+                )}
               </div>
+
+              {contexts.length > 1 && (
+                <div className="context-navigation">
+                  <button
+                    onClick={() =>
+                      setContextIndex((index) =>
+                        (index - 1 + contexts.length) % contexts.length
+                      )
+                    }
+                  >
+                    &lt;
+                  </button>
+
+                  <span>
+                    {contextIndex + 1} / {contexts.length}
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setContextIndex((index) =>
+                        (index + 1) % contexts.length
+                      )
+                    }
+                  >
+                    &gt;
+                  </button>
+                </div>
+              )}
+
+
 
               <div className="example-sentence">
                 <span>SENTENCE</span>
-                <p>{card.example}</p>
+                <p>{activeContext?.sentence ?? card.example}</p>
               </div>
             </section>
           </div>

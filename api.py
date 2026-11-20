@@ -2,6 +2,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+import sqlite3
+from fastapi import Response
+from database import DB_PATH
+
 from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words
 from fastapi import FastAPI, HTTPException
 from datetime import datetime, timezone
@@ -39,12 +43,24 @@ def get_words():
             "word": word,
             "reading": info["reading"],
             "meanings": info["meanings"],
+            "contexts": [
+                {
+                    "screenshot_id": context["screenshot_id"],
+                    "sentence": context["sentence"]
+                }
+                for context in info["contexts"]
+            ],
             "example": (
                 info["contexts"][0]["sentence"]
-                if info.get("contexts")
-                else ""
+                if info.get("contexts") else ""
             ),
+            "screenshot_id": (
+                info["contexts"][0]["screenshot_id"]
+                if info.get("contexts") else None
+            )
+
         })
+
 
     return due_words
 
@@ -100,3 +116,22 @@ def get_collection_set_words(set_id: int):
 
     return due_words
 
+
+@app.get("/api/screenshots/{screenshot_id}")
+def get_screenshot(screenshot_id: int):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            "SELECT image FROM screenshots WHERE id = ?",
+            (screenshot_id,)
+        ).fetchone()
+
+    if row is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Screenshot not found"
+        )
+
+    return Response(
+        content=row[0],
+        media_type="image/png"
+    )

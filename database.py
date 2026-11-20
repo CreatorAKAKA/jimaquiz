@@ -137,6 +137,7 @@ def save_flashcard(word, reading, meanings, image_bytes, sentence, surface):
 
     save_context(word_id, screenshot_id, sentence, surface)
 
+
 def load_flashcards():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.execute("""
@@ -146,16 +147,17 @@ def load_flashcards():
                 words.meanings,
                 contexts.sentence,
                 contexts.surface,
-                screenshots.image
+                screenshots.id
             FROM contexts
             JOIN words ON contexts.word_id = words.id
             JOIN screenshots ON contexts.screenshot_id = screenshots.id
+            ORDER BY contexts.id
         """)
 
         rows = cursor.fetchall()
         word_bank = {}
 
-        for word, reading, meanings, sentence, surface, image in rows:
+        for word, reading, meanings, sentence, surface, screenshot_id in rows:
             if word not in word_bank:
                 word_bank[word] = {
                     "reading": reading,
@@ -164,13 +166,13 @@ def load_flashcards():
                 }
 
             word_bank[word]["contexts"].append({
-                "image_id": hashlib.sha256(image).hexdigest(),
-                "image": image,
+                "screenshot_id": screenshot_id,
                 "sentence": sentence,
                 "surface": surface
             })
 
         return word_bank
+
 
 def update_context_sentences(image_bytes, corrected_text):
     with sqlite3.connect(DB_PATH) as conn:
@@ -349,22 +351,18 @@ def add_word_to_set(word, set_id):
 
 
 
+
 def load_set_words(set_id):
     """Load vocabulary belonging to a particular set."""
+    word_bank = load_flashcards()
+
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
             """
             SELECT
                 words.word,
                 words.reading,
-                words.meanings,
-                COALESCE((
-                    SELECT contexts.sentence
-                    FROM contexts
-                    WHERE contexts.word_id = words.id
-                    ORDER BY contexts.id
-                    LIMIT 1
-                ), '') AS example
+                words.meanings
             FROM set_words
             JOIN words ON set_words.word_id = words.id
             WHERE set_words.set_id = ?
@@ -373,15 +371,27 @@ def load_set_words(set_id):
             (set_id,)
         ).fetchall()
 
-        return [
+    result = []
+
+    for word, reading, meanings in rows:
+        contexts = [
             {
-                "word": word,
-                "reading": reading,
-                "meanings": json.loads(meanings),
-                "example": example
+                "screenshot_id": context["screenshot_id"],
+                "sentence": context["sentence"]
             }
-            for word, reading, meanings, example in rows
+            for context in word_bank.get(word, {}).get("contexts", [])
         ]
+
+        result.append({
+            "word": word,
+            "reading": reading,
+            "meanings": json.loads(meanings),
+            "contexts": contexts,
+            "example": contexts[0]["sentence"] if contexts else "",
+            "screenshot_id": contexts[0]["screenshot_id"] if contexts else None
+        })
+
+    return result
 
 
 def load_saved_words():
