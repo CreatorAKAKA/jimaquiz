@@ -4,10 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import sqlite3
 from fastapi import Response
-from database import DB_PATH
+from database import DB_PATH, save_set_image, load_set_image
 
 from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from datetime import datetime, timezone
 from pydantic import BaseModel
 
@@ -15,7 +15,11 @@ app = FastAPI(title="JimaQuiz API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ],
+    allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
@@ -83,6 +87,76 @@ def submit_rating(request: RatingRequest):
 @app.get("/api/collections")
 def get_collections():
     return load_groups()
+
+@app.post("/api/collections/sets/{set_id}/images/{image_type}")
+async def upload_set_image(
+    set_id: int,
+    image_type: str,
+    file: UploadFile = File(...)
+):
+    if image_type not in ("cover", "banner"):
+        raise HTTPException(status_code=400, detail="Invalid image type")
+
+    if file.content_type not in ("image/jpeg", "image/png", "image/webp"):
+        raise HTTPException(status_code=400, detail="Unsupported image format")
+
+    image_data = await file.read(5 * 1024 * 1024 + 1)
+
+    if len(image_data) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Image must be under 5 MB")
+
+    if not image_data:
+        raise HTTPException(status_code=400, detail="Empty image")
+
+    saved = save_set_image(set_id, image_type, image_data)
+
+    if not saved:
+        raise HTTPException(status_code=404, detail="Set not found")
+
+    return {"success": True}
+
+@app.get("/api/collections/sets/{set_id}/images/{image_type}")
+def get_set_image(set_id: int, image_type: str):
+    if image_type not in ("cover", "banner"):
+        raise HTTPException(status_code=400, detail="Invalid image type")
+
+    image_data = load_set_image(set_id, image_type)
+
+    if image_data is None:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    if image_data.startswith(b"\x89PNG\r\n\x1a\n"):
+        media_type = "image/png"
+    elif image_data.startswith(b"\xff\xd8\xff"):
+        media_type = "image/jpeg"
+    elif image_data.startswith(b"RIFF") and image_data[8:12] == b"WEBP":
+        media_type = "image/webp"
+    else:
+        raise HTTPException(status_code=415, detail="Unsupported stored image")
+
+    return Response(content=image_data, media_type=media_type)
+
+@app.get("/api/collections/sets/{set_id}/vocabulary")
+def get_set_vocabulary(set_id: int):
+    groups = load_groups()
+
+    set_exists = any(
+        collection_set["id"] == set_id
+        for group in groups
+        for collection_set in group["sets"]
+    )
+
+    if not set_exists:
+        raise HTTPException(status_code=404, detail="Set not found")
+
+    words = load_set_words(set_id)
+
+    for word in words:
+        review = load_word_review(word["word"])
+        word["due_at"] = review["due_at"] if review else None
+        word["review_state"] = review["state"] if review else "new"
+
+    return words
 
 
 

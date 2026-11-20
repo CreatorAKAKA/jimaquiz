@@ -1,0 +1,548 @@
+
+.set-page {
+  width: min(1100px, 94%);
+  margin: 32px auto 80px;
+  color: #f7eaf2;
+}
+
+.set-page > button:first-child {
+  background: transparent;
+  color: #e9a8cc;
+  border: none;
+  padding: 10px 0;
+  margin-bottom: 18px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.set-page-banner {
+  width: 100%;
+  height: 200px;
+  border-radius: 18px;
+  background: linear-gradient(120deg, #60405b, #302538);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  overflow: hidden;
+}
+
+.set-page-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 16px 8px;
+  position: relative;
+}
+
+.set-page-cover {
+  width: 130px;
+  height: 130px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #503c50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  overflow: hidden;
+  border: 4px solid #302538;
+    box-sizing: border-box;
+    z-index: 3;
+  transform: translateY(-65px);
+  margin-bottom: -65px;
+}
+
+.set-page-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.set-page-info h1 {
+  font-size: 32px;
+  margin: 0 0 8px;
+  color: #fff0f7;
+}
+
+.set-page-info p {
+  color: #c7adbe;
+  margin: 0 0 18px;
+  font-size: 14px;
+}
+
+.set-page-info button {
+  background: #e9a8cc;
+  color: #291e2a;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 25px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  width: auto;
+}
+
+.set-page-info button:hover {
+  background: #f4c3dd;
+}
+
+.set-page-content {
+  margin-top: 12px;
+  border-top: 1px solid #5a4556;
+  padding-top: 25px;
+}
+
+.set-page-content h2 {
+  font-size: 21px;
+  color: #f6d9e9;
+  margin-bottom: 12px;
+}
+
+.set-page-content p {
+  color: #c7adbe;
+}
+
+
+
+@media (max-width: 600px) {
+  .set-page-banner {
+    height: 150px;
+  }
+
+  .set-page-header {
+    gap: 16px;
+    padding: 0 0 16px;
+  }
+
+  .set-page-cover {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+  }
+
+  .set-page-info h1 {
+    font-size: 23px;
+  }
+}
+
+
+
+
+.set-vocabulary-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.set-vocabulary-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.set-vocabulary-table th {
+  padding: 16px;
+  color: #c7adbe;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid #5a4556;
+  white-space: nowrap;
+}
+
+.set-vocabulary-table td {
+  padding: 22px 16px;
+  color: #f7eaf2;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(255, 210, 235, 0.1);
+  vertical-align: middle;
+}
+
+.set-vocabulary-table tbody tr:hover {
+  background: rgba(255, 210, 235, 0.05);
+}
+
+.set-word-cell {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  white-space: nowrap;
+}
+
+.set-word-cell strong {
+  font-size: 18px;
+  color: #fff0f7;
+}
+
+.set-vocabulary-table .set-word-meaning {
+  color: #c7adbe;
+  line-height: 1.5;
+  max-width: 350px;
+}
+
+.set-vocabulary-table .set-word-due {
+  color: #e9a8cc;
+  white-space: nowrap;
+}
+
+
+.set-word-preview {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  outline: none;
+}
+
+.set-word-preview:hover strong,
+.set-word-preview:focus strong {
+  color: #e9a8cc;
+}
+
+.set-word-popup {
+  display: none;
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 320px;
+  max-width: 80vw;
+  padding: 8px;
+  border-radius: 12px;
+  background: #302538;
+  border: 1px solid #795c73;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.set-word-popup img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 7px;
+}
+
+.set-word-preview:hover .set-word-popup,
+.set-word-preview:focus .set-word-popup,
+.set-word-preview:focus-within .set-word-popup {
+  display: block;
+}
+
+
+.set-word-preview {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  outline: none;
+}
+
+.set-word-preview:hover strong,
+.set-word-preview:focus strong {
+  color: #e9a8cc;
+}
+
+.set-page-banner,
+.set-page-cover {
+  position: relative;
+  cursor: pointer;
+}
+
+.set-page-banner img,
+.set-page-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.set-page-banner:hover,
+.set-page-cover:hover {
+  outline: 2px solid #e9a8cc;
+}
+
+.set-page-banner.image-dragging,
+.set-page-cover.image-dragging {
+  outline: 3px dashed #ffb6d9;
+  outline-offset: -6px;
+  background: #6a4762;
+}
+
+.set-page-banner,
+.set-page-cover {
+  transition: outline 0.15s ease, background 0.15s ease;
+}
+
+/* Image upload hover overlay */
+
+.set-page-banner,
+.set-page-cover {
+  position: relative;
+  cursor: pointer;
+}
+
+.set-image-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  background: rgba(20, 12, 24, 0.65);
+  color: #fff0f7;
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.set-page-banner:hover .set-image-overlay,
+.set-page-cover:hover .set-image-overlay,
+.set-page-banner.image-dragging .set-image-overlay,
+.set-page-cover.image-dragging .set-image-overlay {
+  opacity: 1;
+}
+
+.set-upload-icon {
+  font-size: 28px;
+  color: #e9a8cc;
+}
+
+.set-image-overlay span:not(.set-upload-icon) {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.set-image-overlay small {
+  font-size: 12px;
+  color: #c7adbe;
+}
+
+/* Smaller overlay for square covers */
+
+.set-page-cover .set-upload-icon {
+  font-size: 22px;
+}
+
+.set-page-cover .set-image-overlay span:not(.set-upload-icon) {
+  font-size: 11px;
+}
+
+.set-page-cover .set-image-overlay small {
+  font-size: 9px;
+}
+
+/* Image editing hover controls */
+
+.set-image-overlay {
+  pointer-events: none;
+}
+
+.set-image-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+.set-image-actions button {
+  border: none;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  background: #e9a8cc;
+  color: #291e2a;
+}
+
+.set-image-actions button:hover {
+  background: #f4c3dd;
+}
+
+.set-image-actions button:last-child {
+  background: #59465a;
+  color: #fff0f7;
+}
+
+.set-image-actions button:last-child:hover {
+  background: #735b74;
+}
+
+.set-page-cover .set-image-actions {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.set-page-cover .set-image-actions button {
+  width: 100%;
+  padding: 7px 8px;
+  font-size: 10px;
+}
+
+.set-page-cover .set-image-overlay small {
+  font-size: 9px;
+  text-align: center;
+}
+
+/* Image editor modal */
+
+.set-editor-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.set-editor-modal {
+  width: min(900px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 28px;
+  border-radius: 18px;
+  background: #302538;
+  border: 1px solid #795c73;
+  color: #fff0f7;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.set-editor-modal h2 {
+  margin: 0 0 8px;
+  font-size: 24px;
+}
+
+.set-editor-modal p {
+  color: #c7adbe;
+  margin-bottom: 20px;
+}
+
+.set-editor-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 55vh;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #503c50;
+  cursor: grab;
+  touch-action: none;
+}
+
+.set-editor-canvas:active {
+  cursor: grabbing;
+}
+
+.set-editor-zoom {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.set-editor-zoom label {
+  min-width: 100px;
+  font-size: 14px;
+}
+
+.set-editor-zoom input {
+  flex: 1;
+  accent-color: #e9a8cc;
+}
+
+.set-editor-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.set-editor-buttons button {
+  padding: 11px 20px;
+  border: none;
+  border-radius: 9px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.set-editor-buttons button:first-child {
+  background: #59465a;
+  color: #fff0f7;
+}
+
+.set-editor-buttons button:last-child {
+  background: #e9a8cc;
+  color: #291e2a;
+}
+
+.set-editor-error {
+  color: #ff9caa !important;
+}
+
+/* Keep the title and controls below the banner */
+.set-page-header {
+  margin-top: 0;
+  transform: none;
+}
+
+.set-page-info {
+  position: relative;
+  top: 0;
+  transform: none;
+}
+
+/* Study Set button on the far right */
+
+.set-page-header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.set-page-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.set-study-button {
+  margin-left: auto;
+  flex-shrink: 0;
+  background: #e9a8cc;
+  color: #291e2a;
+  border: none;
+  border-radius: 999px;
+  padding: 11px 25px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.set-study-button:hover {
+  background: #f4c3dd;
+}
+
+/* Set progress indicators */
+
+.set-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.set-progress span {
+  padding: 5px 14px;
+  border: 1px solid #795c73;
+  border-radius: 999px;
+  color: #c7adbe;
+  font-size: 12px;
+  white-space: nowrap;
+}

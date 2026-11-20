@@ -54,6 +54,24 @@ def init_db():
                 UNIQUE(group_id, title)
             )
         """)
+
+        columns = [
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(collection_sets)"
+            ).fetchall()
+        ]
+
+        if "cover_image" not in columns:
+            conn.execute(
+                "ALTER TABLE collection_sets ADD COLUMN cover_image BLOB"
+            )
+
+        if "banner_image" not in columns:
+            conn.execute(
+                "ALTER TABLE collection_sets ADD COLUMN banner_image BLOB"
+            )
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS set_words (
                 set_id INTEGER NOT NULL,
@@ -79,6 +97,8 @@ def init_db():
                     ON DELETE CASCADE
             )
         """)
+
+        
 
 
 def save_word(word, reading, meanings):
@@ -480,6 +500,37 @@ def rate_word(word, rating):
         )
 
     return due_at
+
+def save_set_image(set_id, image_type, image_data):
+    """Save a cover or banner image for a set."""
+    if image_type not in ("cover", "banner"):
+        raise ValueError("Invalid image type")
+
+    column = f"{image_type}_image"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        cursor = conn.execute(
+            f"UPDATE collection_sets SET {column} = ? WHERE id = ?",
+            (image_data, set_id)
+        )
+        return cursor.rowcount > 0
+
+
+def load_set_image(set_id, image_type):
+    """Retrieve a cover or banner image."""
+    if image_type not in ("cover", "banner"):
+        raise ValueError("Invalid image type")
+
+    column = f"{image_type}_image"
+
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            f"SELECT {column} FROM collection_sets WHERE id = ?",
+            (set_id,)
+        ).fetchone()
+
+    return row[0] if row else None
+
 
 if __name__ == "__main__":
     init_db()

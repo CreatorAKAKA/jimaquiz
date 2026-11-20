@@ -50,6 +50,7 @@ function App() {
   const [flipped, setFlipped] = useState(false)
   const [contextIndex, setContextIndex] = useState(0)
   const [readingInput, setReadingInput] = useState('')
+  const [collectionsReset, setCollectionsReset] = useState(0)
 
 
   
@@ -183,15 +184,26 @@ async function rateCard(rating: string) {
   setFlipped(false)
   setReadingInput('')
 }
-
+  
   if (page === 'collections') {
     return (
       <main>
         <nav className="app-navigation">
           <button onClick={returnToReview}>Review</button>
-          <button onClick={() => setPage('collections')}>Collections</button>
+          <button
+            onClick={() => {
+              setPage('collections')
+              setCollectionsReset((previous) => previous + 1)
+            }}
+          >
+            Collections
+          </button>
         </nav>
-        <Collections onStudySet={startSetStudy} />
+
+        <Collections
+          key={collectionsReset}
+          onStudySet={startSetStudy}
+        />
       </main>
     )
   }

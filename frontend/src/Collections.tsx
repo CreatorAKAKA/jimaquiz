@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react'
 import './Collections.css'
+import SetPage from './SetPage'
 
 type CollectionSet = {
   id: number
@@ -19,6 +20,7 @@ type CollectionsProps = {
 
 function Collections({ onStudySet }: CollectionsProps) {
   const [groups, setGroups] = useState<CollectionGroup[]>([])
+  const [selectedSet, setSelectedSet] = useState<CollectionSet | null>(null)
   const [positions, setPositions] = useState<Record<number, number>>({})
   const [animating, setAnimating] = useState<Record<number, boolean>>({})
   const [loading, setLoading] = useState(true)
@@ -51,6 +53,18 @@ function Collections({ onStudySet }: CollectionsProps) {
 
   if (loading) return <p>Loading collections... 🌸</p>
   if (error) return <p>{error}</p>
+
+  if (selectedSet) {
+    return (
+      <SetPage
+        setId={selectedSet.id}
+        title={selectedSet.title}
+        onBack={() => setSelectedSet(null)}
+        onStudy={(setId) => onStudySet?.(setId)}
+      />
+    )
+  }
+
 
   return (
     <div className="collections-page">
@@ -141,21 +155,30 @@ function Collections({ onStudySet }: CollectionsProps) {
               >
                 {currentSet ? (
                   <>
-                    <div className="set-card-main">
-                      <div className="set-thumbnail">
-                        <span>🌸</span>
-                      </div>
-
-                      <div className="set-details">
-                        <button
-                          className="set-title-link"
-                          onClick={(event) => {
+                    <div className="set-card-main">               
+                        <div
+                        className="set-thumbnail"
+                        onClick={(event) => {
                             event.stopPropagation()
-                            onStudySet?.(currentSet.id)
-                          }}
+                            setSelectedSet(currentSet)
+                        }}
+                        style={{ cursor: 'pointer' }}
                         >
-                          {currentSet.title}
+                        <span>🌸</span>
+                        </div>
+
+
+                      <div className="set-details">  
+                        <button
+                        className="set-title-link"
+                        onClick={(event) => {
+                            event.stopPropagation()
+                            setSelectedSet(currentSet)
+                        }}
+                        >
+                        {currentSet.title}
                         </button>
+
                       </div>
                     </div>
 
