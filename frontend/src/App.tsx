@@ -14,9 +14,13 @@ type Vocabulary = {
 function App() {
 
   const [vocabulary, setVocabulary] = useState<Vocabulary[]>([])
+  const [reviewVocabulary, setReviewVocabulary] = useState<Vocabulary[]>([])
+  const [reviewQueue, setReviewQueue] = useState<Vocabulary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [page, setPage] = useState<'review' | 'collections'>('review')
+  const [studyMode, setStudyMode] = useState<'review' | 'set'>('review')
+  const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/words')
@@ -25,6 +29,8 @@ function App() {
         return response.json()
       })
       .then((data: Vocabulary[]) => {
+        setReviewVocabulary(data)
+        setReviewQueue(data)
         setVocabulary(data)
         setStudyQueue(data)
         setTotalCards(data.length)
@@ -40,7 +46,75 @@ function App() {
   const [readingInput, setReadingInput] = useState('')
 
 
+  
+  async function returnToReview() {
+    setPage('review')
+    setStudyMode('review')
+    setSelectedSetId(null)
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/words')
+
+      if (!response.ok) {
+        throw new Error('Failed to load review vocabulary')
+      }
+
+      const words: Vocabulary[] = await response.json()
+
+      setReviewVocabulary(words)
+      setReviewQueue(words)
+      setVocabulary(words)
+      setStudyQueue(words)
+      setTotalCards(words.length)
+      setSnoozedWords([])
+      setFlipped(false)
+      setReadingInput('')
+    } catch (error) {
+      console.error(error)
+      setError('Could not load review vocabulary')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+
+
   const card = studyQueue[0]
+
+  async function startSetStudy(setId: number) {
+    setLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/collections/sets/${setId}/words`
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to load collection set')
+      }
+
+      const words: Vocabulary[] = await response.json()
+
+      setSelectedSetId(setId)
+      setStudyMode('set')
+      setVocabulary(words)
+      setStudyQueue(words)
+      setTotalCards(words.length)
+      setSnoozedWords([])
+      setFlipped(false)
+      setReadingInput('')
+      setPage('review')
+    } catch (error) {
+      console.error(error)
+      alert('Could not load this collection set. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
 
 
 
@@ -105,10 +179,10 @@ async function rateCard(rating: string) {
     return (
       <main>
         <nav className="app-navigation">
-          <button onClick={() => setPage('review')}>Review</button>
+          <button onClick={returnToReview}>Review</button>
           <button onClick={() => setPage('collections')}>Collections</button>
         </nav>
-        <Collections />
+        <Collections onStudySet={startSetStudy} />
       </main>
     )
   }
@@ -116,11 +190,11 @@ async function rateCard(rating: string) {
 
   if (loading) return <p>Loading vocabulary... 🌸</p>
   if (error) return <p>{error}</p>
-  if (vocabulary.length === 0) {
+  if (vocabulary.length === 0 || studyQueue.length === 0) {
     return (
       <main>
         <nav className="app-navigation">
-          <button onClick={() => setPage('review')}>Review</button>
+          <button onClick={returnToReview}>Review</button>
           <button onClick={() => setPage('collections')}>Collections</button>
         </nav>
         <h1>ジマクイズ 🌸</h1>
@@ -142,31 +216,15 @@ async function rateCard(rating: string) {
       </main>
     )
   }
-  if (studyQueue.length === 0) {
-    return (
-      <main>
-        <h1>ジマクイズ 🌸</h1>
-        <div className="flashcard">
-          <div className="flashcard-content">
-            <h2>お疲れ様！</h2>
-            <p>You've completed this study session.</p>
 
-            <button onClick={() => {
-              setStudyQueue([...vocabulary])
-              setSnoozedWords([])
-              setFlipped(false)
-              setReadingInput('')
-            }}>
-              Study Again
-            </button>
-          </div>
-        </div>
-      </main>
-    )
-  }
 
   return (
     <main>
+      <nav className="app-navigation">
+        <button onClick={returnToReview}>Review</button>
+        <button onClick={() => setPage('collections')}>Collections</button>
+      </nav>
+
       <h1>ジマクイズ 🌸</h1>
       <p>Learn Japanese through the stories you love.</p>
 

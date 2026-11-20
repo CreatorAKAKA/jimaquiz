@@ -348,12 +348,23 @@ def add_word_to_set(word, set_id):
         return cursor.rowcount > 0
 
 
+
 def load_set_words(set_id):
     """Load vocabulary belonging to a particular set."""
     with sqlite3.connect(DB_PATH) as conn:
         rows = conn.execute(
             """
-            SELECT words.word, words.reading, words.meanings
+            SELECT
+                words.word,
+                words.reading,
+                words.meanings,
+                COALESCE((
+                    SELECT contexts.sentence
+                    FROM contexts
+                    WHERE contexts.word_id = words.id
+                    ORDER BY contexts.id
+                    LIMIT 1
+                ), '') AS example
             FROM set_words
             JOIN words ON set_words.word_id = words.id
             WHERE set_words.set_id = ?
@@ -366,10 +377,12 @@ def load_set_words(set_id):
             {
                 "word": word,
                 "reading": reading,
-                "meanings": json.loads(meanings)
+                "meanings": json.loads(meanings),
+                "example": example
             }
-            for word, reading, meanings in rows
+            for word, reading, meanings, example in rows
         ]
+
 
 def load_saved_words():
     """Return all saved vocabulary words."""

@@ -2,7 +2,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from database import init_db, load_flashcards, rate_word, load_word_review, load_groups
+from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words
+from fastapi import FastAPI, HTTPException
 from datetime import datetime, timezone
 from pydantic import BaseModel
 
@@ -66,3 +67,36 @@ def submit_rating(request: RatingRequest):
 @app.get("/api/collections")
 def get_collections():
     return load_groups()
+
+
+
+@app.get("/api/collections/sets/{set_id}/words")
+def get_collection_set_words(set_id: int):
+    groups = load_groups()
+
+    set_exists = any(
+        collection_set["id"] == set_id
+        for group in groups
+        for collection_set in group["sets"]
+    )
+
+    if not set_exists:
+        raise HTTPException(status_code=404, detail="Set not found")
+
+    words = load_set_words(set_id)
+    now = datetime.now(timezone.utc)
+    due_words = []
+
+    for word in words:
+        review = load_word_review(word["word"])
+
+        if review and review["due_at"]:
+            due_at = datetime.fromisoformat(review["due_at"])
+
+            if due_at > now:
+                continue
+
+        due_words.append(word)
+
+    return due_words
+
