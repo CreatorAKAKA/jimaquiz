@@ -23,9 +23,33 @@ function App() {
   const [reviewQueue, setReviewQueue] = useState<Vocabulary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [page, setPage] = useState<'review' | 'collections'>('review')
   const [studyMode, setStudyMode] = useState<'review' | 'set'>('review')
   const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
+
+
+  const [pathname, setPathname] = useState(
+    () => window.location.pathname
+  )
+
+  function navigate(path: string) {
+    if (window.location.pathname !== path) {
+      window.history.pushState({}, '', path)
+    }
+    setPathname(path)
+  }
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setPathname(window.location.pathname)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
+
 
   useEffect(() => {
     fetch('http://127.0.0.1:8000/api/words')
@@ -55,7 +79,7 @@ function App() {
 
   
   async function returnToReview() {
-    setPage('review')
+    navigate('/review')
     setStudyMode('review')
     setSelectedSetId(null)
     setLoading(true)
@@ -115,7 +139,7 @@ function App() {
       setSnoozedWords([])
       setFlipped(false)
       setReadingInput('')
-      setPage('review')
+      navigate('/review')
     } catch (error) {
       console.error(error)
       alert('Could not load this collection set. Please try again.')
@@ -185,28 +209,26 @@ async function rateCard(rating: string) {
   setReadingInput('')
 }
   
-  if (page === 'collections') {
+  
+  
+  if (
+    pathname === '/collections' ||
+    /^\/collections\/\d+$/.test(pathname) ||
+    /^\/sets\/\d+$/.test(pathname)
+  ) {
     return (
       <main>
-        <nav className="app-navigation">
-          <button onClick={returnToReview}>Review</button>
-          <button
-            onClick={() => {
-              setPage('collections')
-              setCollectionsReset((previous) => previous + 1)
-            }}
-          >
-            Collections
-          </button>
-        </nav>
-
         <Collections
           key={collectionsReset}
+          pathname={pathname}
+          navigate={navigate}
           onStudySet={startSetStudy}
         />
       </main>
     )
   }
+
+
 
 
   if (loading) return <p>Loading vocabulary... 🌸</p>
@@ -216,7 +238,7 @@ async function rateCard(rating: string) {
       <main>
         <nav className="app-navigation">
           <button onClick={returnToReview}>Review</button>
-          <button onClick={() => setPage('collections')}>Collections</button>
+          <button onClick={() => navigate('/collections')}>Collections</button>
         </nav>
         <h1>ジマクイズ 🌸</h1>
         <p>Learn Japanese through the stories you love.</p>
@@ -243,7 +265,7 @@ async function rateCard(rating: string) {
     <main>
       <nav className="app-navigation">
         <button onClick={returnToReview}>Review</button>
-        <button onClick={() => setPage('collections')}>Collections</button>
+        <button onClick={() => navigate('/collections')}>Collections</button>
       </nav>
 
       <h1>ジマクイズ 🌸</h1>

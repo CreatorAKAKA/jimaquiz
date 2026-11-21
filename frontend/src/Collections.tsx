@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import './Collections.css'
 import SetPage from './SetPage'
 import ProgressBadges, { type SetProgress } from './ProgressBadges'
+import CollectionPage from './CollectionPage'
+import CollectionSetCard from './CollectionSetCard'
 
 type CollectionSet = {
   id: number
@@ -17,11 +19,12 @@ type CollectionGroup = {
 
 type CollectionsProps = {
   onStudySet?: (setId: number) => void
+  pathname: string
+  navigate: (path: string) => void
 }
 
-function Collections({ onStudySet }: CollectionsProps) {
+function Collections({ onStudySet, pathname, navigate }: CollectionsProps) {
   const [groups, setGroups] = useState<CollectionGroup[]>([])
-  const [selectedSet, setSelectedSet] = useState<CollectionSet | null>(null)
   const [positions, setPositions] = useState<Record<number, number>>({})
   const [animating, setAnimating] = useState<Record<number, boolean>>({})
   const [loading, setLoading] = useState(true)
@@ -84,24 +87,61 @@ function Collections({ onStudySet }: CollectionsProps) {
   if (loading) return <p>Loading collections... 🌸</p>
   if (error) return <p>{error}</p>
 
-  if (selectedSet) {
+  
+  const setMatch = pathname.match(/^\/sets\/(\d+)$/)
+  const groupMatch = pathname.match(/^\/collections\/(\d+)$/)
+
+  if (setMatch) {
+    const setId = Number(setMatch[1])
+    const group = groups.find((group) =>
+      group.sets.some((set) => set.id === setId)
+    )
+    const selectedSet = group?.sets.find((set) => set.id === setId)
+
+    if (!selectedSet) return <p>Set not found.</p>
+
     return (
       <SetPage
         setId={selectedSet.id}
         title={selectedSet.title}
-        onBack={() => {
-            setSelectedSet(null)
-            setGroups((previous) => [...previous])
-            }}
-        onStudy={(setId) => onStudySet?.(setId)}
+        onBack={() => navigate(`/collections/${group!.id}`)}
+        onStudy={(id) => onStudySet?.(id)}
+      />
+    )
+  }
+
+  if (groupMatch) {
+    const selectedGroup = groups.find(
+      (group) => group.id === Number(groupMatch[1])
+    )
+
+    if (!selectedGroup) return <p>Collection not found.</p>
+
+    return (
+      <CollectionPage
+        name={selectedGroup.name}
+        sets={selectedGroup.sets}
+        progress={setProgress}
+        onBack={() => navigate('/collections')}
+        onOpenSet={(set) => navigate(`/sets/${set.id}`)}
       />
     )
   }
 
 
+
   return (
     <div className="collections-page">
-      <h2>My Collections</h2>
+        <nav className="app-navigation">
+        <button onClick={() => navigate('/review')}>
+            Review
+        </button>
+        <button onClick={() => navigate('/collections')}>
+            Collections
+        </button>
+        </nav>
+
+        <h2>My Collections</h2>
       <p className="collections-subtitle">
         Click a card to browse its sets.
       </p>
@@ -115,15 +155,34 @@ function Collections({ onStudySet }: CollectionsProps) {
 
           return (
             <div className="deck-container" key={group.id}>
-                <div className="deck-label">{group.name}</div>
+                <button
+                    className="deck-label"
+                    onClick={() => navigate(`/collections/${group.id}`)}
+                    >
+                    {group.name}
+                    </button>
                 <div className={`deck-animation-wrapper ${
                 animating[group.id] ? 'is-shuffling' : ''
                 }`}>
                 {group.sets.length > 2 && (
                     <div className="collection-card deck-third-card" aria-hidden="true">
-                        <div className="set-card-main">
-                        <div className="set-thumbnail">
-                            <span>🌸</span>
+                        <div className="set-card-main"> 
+                            <div className="set-thumbnail">
+                            <img
+                                key={thirdSet.id}
+                                src={`http://127.0.0.1:8000/api/collections/sets/${thirdSet.id}/images/cover`}
+                                alt=""
+                                className="set-thumbnail-image"
+                                onLoad={(event) => {
+                                    event.currentTarget.style.display = 'block'
+                                    event.currentTarget.nextElementSibling?.setAttribute('hidden', '')
+                                }}
+                                onError={(event) => {
+                                event.currentTarget.style.display = 'none'
+                                event.currentTarget.nextElementSibling?.removeAttribute('hidden')
+                                }}
+                            />
+                            <span hidden>🌸</span>
                         </div>
 
                         <div className="set-details">
@@ -139,8 +198,22 @@ function Collections({ onStudySet }: CollectionsProps) {
                 {group.sets.length > 1 && (
                     <div className="collection-card deck-next-card" aria-hidden="true">
                     <div className="set-card-main">
-                        <div className="set-thumbnail">
-                        <span>🌸</span>
+                        <div className="set-thumbnail">       
+                            <img
+                                key={nextSet.id}
+                                src={`http://127.0.0.1:8000/api/collections/sets/${nextSet.id}/images/cover`}
+                                alt=""
+                                className="set-thumbnail-image"
+                                onLoad={(event) => {
+                                    event.currentTarget.style.display = 'block'
+                                    event.currentTarget.nextElementSibling?.setAttribute('hidden', '')
+                                }}
+                                onError={(event) => {
+                                event.currentTarget.style.display = 'none'
+                                event.currentTarget.nextElementSibling?.removeAttribute('hidden')
+                                }}
+                            />
+                            <span hidden>🌸</span>
                         </div>
 
                         <div className="set-details">
@@ -184,17 +257,33 @@ function Collections({ onStudySet }: CollectionsProps) {
               >
                 {currentSet ? (
                   <>
-                    <div className="set-card-main">               
+                    <div className="set-card-main">                
                         <div
                         className="set-thumbnail"
                         onClick={(event) => {
                             event.stopPropagation()
-                            setSelectedSet(currentSet)
+                            navigate(`/sets/${currentSet.id}`)
                         }}
                         style={{ cursor: 'pointer' }}
                         >
-                        <span>🌸</span>
+                        <img
+
+                            key={currentSet.id}
+                            src={`http://127.0.0.1:8000/api/collections/sets/${currentSet.id}/images/cover`}
+                            alt=""
+                            className="set-thumbnail-image"
+                            onLoad={(event) => {
+                                event.currentTarget.style.display = 'block'
+                                event.currentTarget.nextElementSibling?.setAttribute('hidden', '')
+                            }}
+                            onError={(event) => {
+                            event.currentTarget.style.display = 'none'
+                            event.currentTarget.nextElementSibling?.removeAttribute('hidden')
+                            }}
+                        />
+                        <span key={`fallback-${currentSet.id}`} hidden>🌸</span>
                         </div>
+
 
 
                       <div className="set-details">  
@@ -202,7 +291,7 @@ function Collections({ onStudySet }: CollectionsProps) {
                         className="set-title-link"
                         onClick={(event) => {
                             event.stopPropagation()
-                            setSelectedSet(currentSet)
+                            navigate(`/sets/${currentSet.id}`)
                         }}
                         >
                         {currentSet.title}

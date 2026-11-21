@@ -73,10 +73,12 @@ def init_db():
                 "ALTER TABLE collection_sets ADD COLUMN banner_image BLOB"
             )
 
+        
         conn.execute("""
             CREATE TABLE IF NOT EXISTS set_words (
                 set_id INTEGER NOT NULL,
                 word_id INTEGER NOT NULL,
+                added_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY (set_id, word_id),
                 FOREIGN KEY (set_id) REFERENCES collection_sets(id)
                     ON DELETE CASCADE,
@@ -84,6 +86,19 @@ def init_db():
                     ON DELETE CASCADE
             )
         """)
+
+        set_word_columns = {
+            row[1]
+            for row in conn.execute(
+                "PRAGMA table_info(set_words)"
+            ).fetchall()
+        }
+
+        if "added_at" not in set_word_columns:
+            conn.execute(
+                "ALTER TABLE set_words ADD COLUMN added_at TEXT"
+            )
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS word_reviews (
                 word_id INTEGER PRIMARY KEY,
@@ -371,20 +386,22 @@ def move_set(set_id, new_group_id):
             (new_group_id, set_id)
         )
 
+
 def add_word_to_set(word, set_id):
     """Add an existing vocabulary word to a set."""
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
         cursor = conn.execute(
             """
-            INSERT OR IGNORE INTO set_words (set_id, word_id)
-            SELECT ?, id
+            INSERT OR IGNORE INTO set_words (set_id, word_id, added_at)
+            SELECT ?, id, ?
             FROM words
             WHERE word = ?
             """,
-            (set_id, word)
+            (set_id, datetime.now(timezone.utc).isoformat(), word)
         )
         return cursor.rowcount > 0
+
 
 
 
@@ -399,7 +416,8 @@ def load_set_words(set_id):
             SELECT
                 words.word,
                 words.reading,
-                words.meanings
+                words.meanings,
+                set_words.added_at
             FROM set_words
             JOIN words ON set_words.word_id = words.id
             WHERE set_words.set_id = ?
@@ -410,7 +428,7 @@ def load_set_words(set_id):
 
     result = []
 
-    for word, reading, meanings in rows:
+    for word, reading, meanings, added_at in rows:
         contexts = [
             {
                 "screenshot_id": context["screenshot_id"],
@@ -423,6 +441,7 @@ def load_set_words(set_id):
             "word": word,
             "reading": reading,
             "meanings": json.loads(meanings),
+            "added_at": added_at,
             "contexts": contexts,
             "example": contexts[0]["sentence"] if contexts else "",
             "screenshot_id": contexts[0]["screenshot_id"] if contexts else None

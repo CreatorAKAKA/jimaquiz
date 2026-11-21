@@ -9,6 +9,7 @@ type SetWord = {
   word: string
   reading: string
   meanings: string[][]
+  added_at: string | null
   screenshot_id: number | null
   due_at: string | null
   review_state: string
@@ -47,6 +48,22 @@ function formatDueDate(dueAt: string | null): string {
     year: due.getFullYear() !== now.getFullYear()
       ? 'numeric'
       : undefined,
+  })
+}
+
+function formatAddedDate(addedAt: string | null): string {
+  if (!addedAt) return '—'
+
+  const date = new Date(
+    addedAt.includes('T') ? addedAt : addedAt.replace(' ', 'T') + 'Z'
+  )
+
+  if (Number.isNaN(date.getTime())) return '—'
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
   })
 }
 
@@ -320,9 +337,6 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
 
   return (
     <div className="set-page">
-      <button onClick={onBack}>
-        ← Back to Collections
-      </button>
 
       <div
         className={`set-page-banner ${draggingImage === 'banner' ? 'image-dragging' : ''}`}
@@ -386,7 +400,18 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
             event.target.value = ''
             }}
         />
-        </div>
+
+        <button
+          type="button"
+          className="set-banner-back"
+          onClick={(event) => {
+            event.stopPropagation()
+            onBack()
+          }}
+        >
+          ← Back
+        </button>
+      </div>
 
       <div className="set-page-header">
         <div
@@ -481,6 +506,7 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
                   <th>Vocabulary ({words.length})</th>
                   <th>Reading</th>
                   <th>Meaning</th>
+                  <th>Date Added</th>
                   <th>Next Review</th>
                 </tr>
               </thead>
@@ -516,6 +542,10 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
 
                     <td className="set-word-meaning">
                       {word.meanings[0]?.join('; ') ?? ''}
+                    </td>
+
+                    <td className="set-word-due">
+                      {formatAddedDate(word.added_at)}
                     </td>
 
                     <td className="set-word-due">
