@@ -140,6 +140,7 @@ function Collections({ onStudySet, pathname, navigate }: CollectionsProps) {
         <button onClick={() => navigate('/collections')}>
             Collections
         </button>
+        <button onClick={() => navigate('/strokle')}>Strokle</button>
         </nav>
 
         <h2>My Collections</h2>

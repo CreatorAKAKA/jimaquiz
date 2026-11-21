@@ -4,6 +4,7 @@ import { toHiragana } from 'wanakana'
 import './App.css'
 import Collections from './Collections'
 import CreatePage from './CreatePage'
+import Strokle from './Strokle'
 
 type Vocabulary = {
   word: string
@@ -210,6 +211,21 @@ async function rateCard(rating: string) {
   setReadingInput('')
 }
   
+  if (pathname === '/strokle') {
+    return (
+      <main>
+        <nav className="app-navigation">
+          <button onClick={() => navigate('/create')}>Create</button>
+          <button onClick={returnToReview}>Review</button>
+          <button onClick={() => navigate('/collections')}>Collections</button>
+          <button onClick={() => navigate('/strokle')}>Strokle</button>
+        </nav>
+
+        <Strokle />
+      </main>
+    )
+  }
+
   
   if (pathname === '/create') {
     return (
@@ -218,6 +234,7 @@ async function rateCard(rating: string) {
           <button onClick={() => navigate('/create')}>Create</button>
           <button onClick={returnToReview}>Review</button>
           <button onClick={() => navigate('/collections')}>Collections</button>
+          <button onClick={() => navigate('/strokle')}>Strokle</button>
         </nav>
 
         <CreatePage />
@@ -256,6 +273,7 @@ async function rateCard(rating: string) {
           <button onClick={returnToReview}>Review</button>
 
           <button onClick={() => navigate('/collections')}>Collections</button>
+          <button onClick={() => navigate('/strokle')}>Strokle</button>
         </nav>
         <h1>ジマクイズ 🌸</h1>
         <p>Learn Japanese through the stories you love.</p>
@@ -285,6 +303,7 @@ async function rateCard(rating: string) {
         <button onClick={returnToReview}>Review</button>
 
         <button onClick={() => navigate('/collections')}>Collections</button>
+        <button onClick={() => navigate('/strokle')}>Strokle</button>
       </nav>
 
       <h1>ジマクイズ 🌸</h1>
