@@ -5,6 +5,7 @@ import { toHiragana } from 'wanakana'
 
 type Screenshot = {
   id: string
+  imageHash: string
   file: File
   preview: string
   text: string
@@ -30,7 +31,10 @@ function CreatePage() {
   const [creatingSet, setCreatingSet] = useState(false)
   const [collectionError, setCollectionError] = useState('')
 
-  const [savedEntries, setSavedEntries] = useState<Set<string>>(new Set())
+  const [savedStatuses, setSavedStatuses] = useState<Record<string, VocabularyStatus>>({})
+  const [statusLoading, setStatusLoading] = useState(false)
+  const [statusError, setStatusError] = useState('')
+  const [statusVersion, setStatusVersion] = useState(0)
   const [savingWord, setSavingWord] = useState<string | null>(null)
   const [saveError, setSaveError] = useState('')
 
@@ -86,24 +90,36 @@ function CreatePage() {
     }
   }
 
+  async function hashImage(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer()
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+
+    return Array.from(new Uint8Array(hashBuffer))
+      .map((byte) => byte.toString(16).padStart(2, '0'))
+      .join('')
+  }
   
-  function handleUpload(files: FileList | null) {
+  async function handleUpload(files: FileList | null) {
     if (!files) return
 
-    const uploaded = Array.from(files).map((file) => {
-      const preview = URL.createObjectURL(file)
+    const uploaded = await Promise.all(
+      Array.from(files).map(async (file) => {
+        const imageHash = await hashImage(file)
+        const preview = URL.createObjectURL(file)
 
-      previewUrls.current.push(preview)
+        previewUrls.current.push(preview)
 
-      return {
-        id: crypto.randomUUID(),
-        file,
-        preview,
-        text: '',
-        loading: true,
-        error: '',
-      }
-    })
+        return {
+          id: crypto.randomUUID(),
+          imageHash,
+          file,
+          preview,
+          text: '',
+          loading: true,
+          error: '',
+        }
+      })
+    )
 
     setScreenshots((previous) => [...previous, ...uploaded])
 
@@ -199,6 +215,67 @@ function CreatePage() {
   }, [screenshots])
 
 
+  useEffect(() => {
+    const controller = new AbortController()
+
+    setSavedStatuses({})
+    setStatusError('')
+
+    if (!selectedSet || selectedSet === 'new' || vocabulary.length === 0) {
+      setStatusLoading(false)
+      return
+    }
+
+    setStatusLoading(true)
+
+    async function checkStatuses() {
+      try {
+        const response = await fetch(
+          'http://127.0.0.1:8000/api/create/status',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              set_id: Number(selectedSet),
+              items: vocabulary.map((entry) => ({
+                word: entry.word,
+                image_hashes: entry.contexts.map((context) =>
+                  screenshots.find(
+                    (item) => item.id === context.screenshotId
+                  )?.imageHash
+                ).filter(Boolean),
+              })),
+            }),
+            signal: controller.signal,
+          }
+        )
+
+        if (!response.ok) {
+          throw new Error('Could not check saved vocabulary')
+        }
+
+        const result = await response.json()
+
+        if (!controller.signal.aborted) {
+          setSavedStatuses(result.statuses)
+        }
+      } catch {
+        if (!controller.signal.aborted) {
+          setStatusError('Could not check saved vocabulary')
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setStatusLoading(false)
+        }
+      }
+    }
+
+    checkStatuses()
+
+    return () => controller.abort()
+  }, [selectedSet, vocabulary, screenshots, statusVersion])
 
   async function fetchCollections() {
     const response = await fetch(
@@ -285,20 +362,33 @@ function CreatePage() {
     }
   }
 
+  function getWordStatus(entry: GroupedWord) {
+    const status = savedStatuses[entry.word]
 
-  function getSaveKey(entry: GroupedWord) {
-    return JSON.stringify([
-      selectedSet,
-      entry.word,
-      entry.contexts,
-    ])
+    if (!status || !status.word_exists) {
+      return 'new'
+    }
+
+    if (!status.in_set) {
+      return 'add-to-set'
+    }
+
+    const allContextsSaved = entry.contexts.every((context) => {
+      const screenshot = screenshots.find(
+        (item) => item.id === context.screenshotId
+      )
+
+      return screenshot &&
+        status.saved_hashes.includes(screenshot.imageHash)
+    })
+
+    return allContextsSaved ? 'saved' : 'new-context'
   }
 
   async function handleSaveWord(entry: GroupedWord) {
     if (!selectedSet || selectedSet === 'new' || savingWord) return
 
     const setId = Number(selectedSet)
-    const saveKey = getSaveKey(entry)
 
     setSavingWord(entry.word)
     setSaveError('')
@@ -341,11 +431,9 @@ function CreatePage() {
         }
       }
 
-      setSavedEntries((previous) => {
-        const updated = new Set(previous)
-        updated.add(saveKey)
-        return updated
-      })
+      setSavedStatuses({})
+      setStatusLoading(true)
+      setStatusVersion((previous) => previous + 1)
     } catch {
       setSaveError(`Could not save ${entry.word}. Please retry.`)
     } finally {
@@ -626,6 +714,9 @@ function CreatePage() {
 
             {vocabLoading && <p>Extracting vocabulary...</p>}
             {vocabError && <p>{vocabError}</p>}
+            {statusError && (
+              <p className="collection-error">{statusError}</p>
+            )}
             {saveError && (
               <p className="collection-error">{saveError}</p>
             )}
@@ -673,31 +764,43 @@ function CreatePage() {
 
                   <button
                     className={`save-word-button ${
-                      savedEntries.has(getSaveKey(entry))
+                      getWordStatus(entry) === 'saved'
                         ? 'is-saved'
-                        : ''
+                        : getWordStatus(entry) === 'new-context'
+                          ? 'new-context'
+                          : getWordStatus(entry) === 'add-to-set'
+                            ? 'add-to-set'
+                            : ''
                     }`}
                     disabled={
                       !selectedSet ||
                       selectedSet === 'new' ||
                       vocabLoading ||
+                      statusLoading ||
+                      !!statusError ||
                       !!vocabError ||
                       screenshots.some((item) => item.loading) ||
                       savingWord !== null ||
-                      savedEntries.has(getSaveKey(entry))
+                      getWordStatus(entry) === 'saved'
                     }
                     onClick={() => handleSaveWord(entry)}
                     title={
-                      !selectedSet || selectedSet === 'new'
-                        ? 'Select a vocabulary set first'
-                        : 'Save vocabulary'
+                      getWordStatus(entry) === 'saved'
+                        ? 'Already saved'
+                        : getWordStatus(entry) === 'new-context'
+                          ? 'Save new screenshot context'
+                          : getWordStatus(entry) === 'add-to-set'
+                            ? 'Add existing word to this set'
+                            : 'Save vocabulary'
                     }
                   >
-                    {savedEntries.has(getSaveKey(entry))
-                      ? '✓'
-                      : savingWord === entry.word
-                        ? '…'
-                        : '＋'}
+                    {savingWord === entry.word || statusLoading
+                      ? '…'
+                      : getWordStatus(entry) === 'saved'
+                        ? '✓'
+                        : getWordStatus(entry) === 'new-context'
+                          ? '⊕'
+                          : '＋'}
                   </button>
 
 
@@ -746,6 +849,12 @@ type ExtractedWord = {
   surface: string
   meanings: string[][]
   parts_of_speech: string[]
+}
+
+type VocabularyStatus = {
+  word_exists: boolean
+  in_set: boolean
+  saved_hashes: string[]
 }
 
 type GroupedWord = {

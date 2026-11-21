@@ -427,3 +427,15 @@
   border-radius: 6px;
   padding: 3px 8px;
 }
+
+.create-page .save-word-button.new-context {
+  color: #e9c78d;
+  background: rgba(233, 199, 141, 0.08);
+  border-color: rgba(233, 199, 141, 0.25);
+}
+
+.create-page .save-word-button.add-to-set {
+  color: #a8c8ed;
+  background: rgba(168, 200, 237, 0.08);
+  border-color: rgba(168, 200, 237, 0.25);
+}

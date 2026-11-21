@@ -7,7 +7,7 @@ from fastapi import Response
 from database import DB_PATH, save_set_image, load_set_image
 from database import save_flashcard, add_word_to_set
 from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words, load_set_progress
-from database import create_group, create_set
+from database import create_group, create_set, check_vocabulary_status
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from datetime import datetime, timezone
 from pydantic import BaseModel
@@ -467,3 +467,41 @@ def create_collection_set(request: CreateSetRequest):
         "group_id": request.group_id,
         "title": title
     }
+
+
+class VocabularyStatusItem(BaseModel):
+    word: str
+    image_hashes: list[str]
+
+
+class VocabularyStatusRequest(BaseModel):
+    set_id: int
+    items: list[VocabularyStatusItem]
+
+
+@app.post("/api/create/status")
+def get_vocabulary_status(request: VocabularyStatusRequest):
+    groups = load_groups()
+
+    set_exists = any(
+        collection_set["id"] == request.set_id
+        for group in groups
+        for collection_set in group["sets"]
+    )
+
+    if not set_exists:
+        raise HTTPException(
+            status_code=404,
+            detail="Set not found"
+        )
+
+    statuses = {}
+
+    for item in request.items:
+        statuses[item.word] = check_vocabulary_status(
+            item.word,
+            request.set_id,
+            item.image_hashes
+        )
+
+    return {"statuses": statuses}

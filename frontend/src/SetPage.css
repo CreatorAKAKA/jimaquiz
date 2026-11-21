@@ -196,9 +196,9 @@
   z-index: 20;
   top: calc(100% + 10px);
   left: 0;
-  width: 320px;
+  width: 440px;
   max-width: 80vw;
-  padding: 8px;
+  padding: 12px;
   border-radius: 12px;
   background: #302538;
   border: 1px solid #795c73;
@@ -617,4 +617,77 @@
 .set-banner-back:hover {
   background: #29212e;
   border-color: #f9a8d4;
+}
+
+.set-context-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: #e9a8cc;
+  background: rgba(249, 168, 212, 0.08);
+  border: 1px solid rgba(249, 168, 212, 0.2);
+  border-radius: 5px;
+  padding: 2px 5px;
+  margin-left: 7px;
+}
+
+.set-context-sentence {
+  font-size: 17px;
+  line-height: 1.8;
+  margin: 12px 6px;
+  white-space: normal;
+  color: #f7eaf2;
+}
+
+.set-context-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px;
+}
+
+.set-context-navigation span {
+  font-size: 14px;
+  color: #b9a9b9;
+}
+
+.set-context-navigation button {
+  background: rgba(249, 168, 212, 0.08);
+  border: 1px solid rgba(249, 168, 212, 0.2);
+  color: #f9a8d4;
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.set-context-navigation button:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.set-word-preview .set-word-popup {
+  pointer-events: auto;
+}
+
+.set-word-preview:hover .set-word-popup,
+.set-word-preview:focus-within .set-word-popup {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.set-word-popup::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.set-context-highlight {
+  color: #f9a8d4;
+  background: transparent;
+  font-weight: 700;
 }

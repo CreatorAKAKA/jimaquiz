@@ -468,7 +468,8 @@ def load_set_words(set_id):
         contexts = [
             {
                 "screenshot_id": context["screenshot_id"],
-                "sentence": context["sentence"]
+                "sentence": context["sentence"],
+                "surface": context["surface"]
             }
             for context in word_bank.get(word, {}).get("contexts", [])
         ]
@@ -485,6 +486,55 @@ def load_set_words(set_id):
 
     return result
 
+def check_vocabulary_status(word, set_id, image_hashes):
+    with sqlite3.connect(DB_PATH) as conn:
+        row = conn.execute(
+            """
+            SELECT id FROM words
+            WHERE word = ?
+            """,
+            (word,)
+        ).fetchone()
+
+        if row is None:
+            return {
+                "word_exists": False,
+                "in_set": False,
+                "saved_hashes": []
+            }
+
+        word_id = row[0]
+
+        in_set = conn.execute(
+            """
+            SELECT 1 FROM set_words
+            WHERE word_id = ? AND set_id = ?
+            """,
+            (word_id, set_id)
+        ).fetchone() is not None
+
+        rows = conn.execute(
+            """
+            SELECT screenshots.image_hash
+            FROM contexts
+            JOIN screenshots
+                ON contexts.screenshot_id = screenshots.id
+            WHERE contexts.word_id = ?
+            """,
+            (word_id,)
+        ).fetchall()
+
+        existing_hashes = {row[0] for row in rows}
+
+        return {
+            "word_exists": True,
+            "in_set": in_set,
+            "saved_hashes": [
+                image_hash
+                for image_hash in image_hashes
+                if image_hash in existing_hashes
+            ]
+        }
 
 def load_saved_words():
     """Return all saved vocabulary words."""

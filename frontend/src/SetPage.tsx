@@ -11,11 +11,83 @@ type SetWord = {
   meanings: string[][]
   added_at: string | null
   screenshot_id: number | null
+  contexts: {
+    screenshot_id: number
+    sentence: string
+    surface: string
+  }[]
   due_at: string | null
   review_state: string
 }
 
+function WordPreview({ word }: { word: SetWord }) {
+  const [contextIndex, setContextIndex] = useState(0)
 
+  const contexts = word.contexts ?? []
+  const context = contexts[contextIndex]
+
+  return (
+    <div className="set-word-preview">
+      <strong tabIndex={contexts.length > 0 ? 0 : undefined}>
+        {word.word}
+      </strong>
+
+      {contexts.length > 1 && (
+        <span className="set-context-count">
+          {contexts.length}
+        </span>
+      )}
+
+      {context && (
+        <div className="set-word-popup">
+          <img
+            src={`http://127.0.0.1:8000/api/screenshots/${context.screenshot_id}`}
+            alt={`Screenshot for ${word.word}`}
+          />
+
+          <p className="set-context-sentence">
+            {context.surface
+              ? context.sentence.split(context.surface).map((part, index) => (
+                  <span key={index}>
+                    {index > 0 && (
+                      <mark className="set-context-highlight">
+                        {context.surface}
+                      </mark>
+                    )}
+                    {part}
+                  </span>
+                ))
+              : context.sentence}
+          </p>
+
+          {contexts.length > 1 && (
+            <div className="set-context-navigation">
+              <button
+                type="button"
+                disabled={contextIndex === 0}
+                onClick={() => setContextIndex((index) => index - 1)}
+              >
+                ←
+              </button>
+
+              <span>
+                {contextIndex + 1} / {contexts.length}
+              </span>
+
+              <button
+                type="button"
+                disabled={contextIndex === contexts.length - 1}
+                onClick={() => setContextIndex((index) => index + 1)}
+              >
+                →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function formatDueDate(dueAt: string | null, now: number): string {
   if (!dueAt) return 'New'
@@ -510,21 +582,7 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
                       
                         
                         <div className="set-word-cell">
-                        <div
-                            className="set-word-preview"
-                            tabIndex={word.screenshot_id != null ? 0 : undefined}
-                        >
-                            <strong>{word.word}</strong>
-
-                            {word.screenshot_id != null && (
-                            <div className="set-word-popup">
-                                <img
-                                src={`http://127.0.0.1:8000/api/screenshots/${word.screenshot_id}`}
-                                alt={`Screenshot for ${word.word}`}
-                                />
-                            </div>
-                            )}
-                        </div>
+                          <WordPreview word={word} />
                         </div>
 
 
