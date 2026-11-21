@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { toHiragana } from 'wanakana'
 import './App.css'
 import Collections from './Collections'
+import CreatePage from './CreatePage'
 
 type Vocabulary = {
   word: string
@@ -210,6 +211,20 @@ async function rateCard(rating: string) {
 }
   
   
+  if (pathname === '/create') {
+    return (
+      <main>
+        <nav className="app-navigation">
+          <button onClick={() => navigate('/create')}>Create</button>
+          <button onClick={returnToReview}>Review</button>
+          <button onClick={() => navigate('/collections')}>Collections</button>
+        </nav>
+
+        <CreatePage />
+      </main>
+    )
+  }
+
   
   if (
     pathname === '/collections' ||
@@ -235,9 +250,11 @@ async function rateCard(rating: string) {
   if (error) return <p>{error}</p>
   if (vocabulary.length === 0 || studyQueue.length === 0) {
     return (
-      <main>
+      <main> 
         <nav className="app-navigation">
+          <button onClick={() => navigate('/create')}>Create</button>
           <button onClick={returnToReview}>Review</button>
+
           <button onClick={() => navigate('/collections')}>Collections</button>
         </nav>
         <h1>ジマクイズ 🌸</h1>
@@ -262,9 +279,11 @@ async function rateCard(rating: string) {
 
 
   return (
-    <main>
+    <main> 
       <nav className="app-navigation">
+        <button onClick={() => navigate('/create')}>Create</button>
         <button onClick={returnToReview}>Review</button>
+
         <button onClick={() => navigate('/collections')}>Collections</button>
       </nav>
 
@@ -301,7 +320,7 @@ async function rateCard(rating: string) {
                     placeholder="Type the reading..."
                     value={readingInput}
                     onChange={(event) => {
-                      const converted = toHiragana(event.target.value)
+                      const converted = toHiragana(event.target.value, { IMEMode: true })
                       setReadingInput(converted)
 
                       if (converted === toHiragana(card.reading)) {

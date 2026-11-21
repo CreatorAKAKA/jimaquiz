@@ -5,11 +5,24 @@ from fastapi.middleware.cors import CORSMiddleware
 import sqlite3
 from fastapi import Response
 from database import DB_PATH, save_set_image, load_set_image
-
+from database import save_flashcard, add_word_to_set
 from database import init_db, load_flashcards, rate_word, load_word_review, load_groups, load_set_words, load_set_progress
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from database import create_group, create_set
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from datetime import datetime, timezone
 from pydantic import BaseModel
+
+
+import io
+import numpy as np
+import easyocr
+from PIL import Image, ImageEnhance
+from functools import lru_cache
+
+from token_test import extract_vocabulary
+from dictionary_test import get_definitions, get_word_info
+
+
 
 app = FastAPI(title="JimaQuiz API")
 
@@ -26,6 +39,10 @@ app.add_middleware(
 
 init_db()
 
+
+@lru_cache(maxsize=1)
+def get_ocr_reader():
+    return easyocr.Reader(["ja"], gpu=False)
 
 
 @app.get("/api/words")
@@ -224,3 +241,229 @@ def get_screenshot(screenshot_id: int):
         content=row[0],
         media_type="image/png"
     )
+
+
+@app.post("/api/create/ocr")
+async def recognize_screenshot(
+    file: UploadFile = File(...),
+    subtitle_percentage: int = 30
+):
+    if not 10 <= subtitle_percentage <= 60:
+        raise HTTPException(
+            status_code=400,
+            detail="Subtitle percentage must be between 10 and 60"
+        )
+
+    if file.content_type not in ("image/png", "image/jpeg", "image/webp"):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported image format"
+        )
+
+    image_bytes = await file.read(10 * 1024 * 1024 + 1)
+
+    if len(image_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail="Image must be under 10 MB"
+        )
+
+    try:
+        image = Image.open(io.BytesIO(image_bytes))
+        image.load()
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid image"
+        )
+
+    width, height = image.size
+
+    subtitle_region = image.crop((
+        0,
+        int(height * (1 - subtitle_percentage / 100)),
+        width,
+        height
+    ))
+
+    grayscale = subtitle_region.convert("L")
+    processed = ImageEnhance.Contrast(grayscale).enhance(2.0)
+
+    results = get_ocr_reader().readtext(
+        np.array(processed),
+        detail=0
+    )
+
+    return {
+        "text": "".join(results),
+        "subtitle_percentage": subtitle_percentage
+    }
+
+
+class VocabularyRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/create/vocabulary")
+def extract_screenshot_vocabulary(request: VocabularyRequest):
+    if not request.text.strip():
+        return {"vocabulary": []}
+
+    entries = extract_vocabulary(request.text)
+    vocabulary = []
+    seen_words = set()
+
+    for entry in entries:
+        word = entry["dictionary"]
+
+        if word in seen_words:
+            continue
+
+        seen_words.add(word)
+
+        info = get_word_info(word, entry["reading"])
+
+        vocabulary.append({
+            "word": word,
+            "reading": entry["reading"],
+            "surface": entry["surface"],
+            "meanings": info["meanings"],
+            "parts_of_speech": info["parts_of_speech"]
+        })
+
+    return {"vocabulary": vocabulary}
+
+
+
+class SaveVocabularyRequest(BaseModel):
+    set_id: int
+    word: str
+    reading: str
+    meanings: list[list[str]]
+    sentence: str
+    surface: str
+
+
+@app.post("/api/create/save")
+async def save_created_vocabulary(
+    file: UploadFile = File(...),
+    data: str = Form(...)
+):
+    import json
+
+    try:
+        request = SaveVocabularyRequest.model_validate_json(data)
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid vocabulary data"
+        )
+
+    groups = load_groups()
+
+    set_exists = any(
+        collection_set["id"] == request.set_id
+        for group in groups
+        for collection_set in group["sets"]
+    )
+
+    if not set_exists:
+        raise HTTPException(
+            status_code=404,
+            detail="Set not found"
+        )
+
+    
+    if file.content_type not in ("image/png", "image/jpeg", "image/webp"):
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported image format"
+        )
+
+    image_bytes = await file.read(10 * 1024 * 1024 + 1)
+
+    if len(image_bytes) > 10 * 1024 * 1024:
+        raise HTTPException(
+            status_code=413,
+            detail="Screenshot must be under 10 MB"
+        )
+
+
+    if not image_bytes:
+        raise HTTPException(
+            status_code=400,
+            detail="Empty screenshot"
+        )
+
+    save_flashcard(
+        request.word,
+        request.reading,
+        request.meanings,
+        image_bytes,
+        request.sentence,
+        request.surface
+    )
+
+    add_word_to_set(request.word, request.set_id)
+
+    return {
+        "success": True,
+        "word": request.word,
+        "set_id": request.set_id
+    }
+
+
+class CreateGroupRequest(BaseModel):
+    name: str
+
+
+class CreateSetRequest(BaseModel):
+    group_id: int
+    title: str
+
+
+@app.post("/api/collections/groups")
+def create_collection_group(request: CreateGroupRequest):
+    name = request.name.strip()
+
+    if not name:
+        raise HTTPException(
+            status_code=400,
+            detail="Collection name cannot be empty"
+        )
+
+    group_id = create_group(name)
+
+    return {
+        "success": True,
+        "id": group_id,
+        "name": name
+    }
+
+
+@app.post("/api/collections/sets")
+def create_collection_set(request: CreateSetRequest):
+    title = request.title.strip()
+
+    if not title:
+        raise HTTPException(
+            status_code=400,
+            detail="Set name cannot be empty"
+        )
+
+    groups = load_groups()
+
+    if not any(group["id"] == request.group_id for group in groups):
+        raise HTTPException(
+            status_code=404,
+            detail="Collection not found"
+        )
+
+    set_id = create_set(request.group_id, title)
+
+    return {
+        "success": True,
+        "id": set_id,
+        "group_id": request.group_id,
+        "title": title
+    }

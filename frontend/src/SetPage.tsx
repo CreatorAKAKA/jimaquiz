@@ -16,39 +16,23 @@ type SetWord = {
 }
 
 
-function formatDueDate(dueAt: string | null): string {
+
+function formatDueDate(dueAt: string | null, now: number): string {
   if (!dueAt) return 'New'
 
-  const due = new Date(dueAt)
-  if (Number.isNaN(due.getTime())) return 'Unknown'
+  const due = new Date(dueAt).getTime()
+  if (Number.isNaN(due)) return 'Unknown'
 
-  const now = new Date()
+  const remaining = due - now
 
-  if (due <= now) return 'Due now'
+  if (remaining <= 0) return 'Due now'
 
-  const today = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate()
-  )
+  const hours = remaining / 3600000
 
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  if (hours < 1) return '< 1h'
+  if (hours < 24) return `In ${Math.ceil(hours)}h`
 
-  const dayAfterTomorrow = new Date(tomorrow)
-  dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 1)
-
-  if (due >= tomorrow && due < dayAfterTomorrow) {
-    return 'Tomorrow'
-  }
-
-  return due.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: due.getFullYear() !== now.getFullYear()
-      ? 'numeric'
-      : undefined,
-  })
+  return `In ${Math.ceil(hours / 24)}d`
 }
 
 function formatAddedDate(addedAt: string | null): string {
@@ -81,6 +65,7 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
   const [words, setWords] = useState<SetWord[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [now, setNow] = useState(Date.now)
 
   const [imageVersion, setImageVersion] = useState(0)
   const [draggingImage, setDraggingImage] = useState<'banner' | 'cover' | null>(null)
@@ -96,6 +81,13 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
   const editorDragRef = useRef<{ x: number; y: number } | null>(null)
   const bannerInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
+    useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(Date.now())
+    }, 60000)
+
+    return () => clearInterval(timer)
+  }, [])
   
   const imageUrl = (type: 'banner' | 'cover') =>
   `http://127.0.0.1:8000/api/collections/sets/${setId}/images/${type}?v=${imageVersion}`
@@ -549,7 +541,7 @@ function SetPage({ setId, title, onBack, onStudy }: SetPageProps) {
                     </td>
 
                     <td className="set-word-due">
-                      {formatDueDate(word.due_at)}
+                      {formatDueDate(word.due_at, now)}
                     </td>
                   </tr>
                 ))}

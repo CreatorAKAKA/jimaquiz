@@ -171,9 +171,23 @@ def save_screenshot(image_bytes):
 
         return cursor.lastrowid
 
+
 def save_context(word_id, screenshot_id, sentence, surface):
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
+
+        existing = conn.execute(
+            """
+            SELECT id
+            FROM contexts
+            WHERE word_id = ? AND screenshot_id = ?
+            """,
+            (word_id, screenshot_id)
+        ).fetchone()
+
+        if existing:
+            return False
+
         conn.execute(
             """
             INSERT INTO contexts
@@ -182,6 +196,9 @@ def save_context(word_id, screenshot_id, sentence, surface):
             """,
             (word_id, screenshot_id, sentence, surface)
         )
+
+        return True
+
 
 def save_flashcard(word, reading, meanings, image_bytes, sentence, surface):
     word_id = save_word(word, reading, meanings)
@@ -290,12 +307,13 @@ def delete_context(word, image_id):
         """)
 
 
+
 def create_group(name):
-    """Create a new collection group."""
+    """Create a new collection group and return its ID."""
     name = name.strip()
 
     if not name:
-        return
+        return None
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute(
@@ -303,16 +321,26 @@ def create_group(name):
             (name,)
         )
 
+        row = conn.execute(
+            "SELECT id FROM collection_groups WHERE name = ?",
+            (name,)
+        ).fetchone()
+
+        return row[0]
+
+
+
 
 def create_set(group_id, title):
-    """Create a new set inside a collection group."""
+    """Create a new set and return its ID."""
     title = title.strip()
 
     if not title:
-        return
+        return None
 
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("PRAGMA foreign_keys = ON")
+
         conn.execute(
             """
             INSERT OR IGNORE INTO collection_sets (group_id, title)
@@ -320,6 +348,17 @@ def create_set(group_id, title):
             """,
             (group_id, title)
         )
+
+        row = conn.execute(
+            """
+            SELECT id FROM collection_sets
+            WHERE group_id = ? AND title = ?
+            """,
+            (group_id, title)
+        ).fetchone()
+
+        return row[0]
+
 
 
 def load_groups():
@@ -401,9 +440,6 @@ def add_word_to_set(word, set_id):
             (set_id, datetime.now(timezone.utc).isoformat(), word)
         )
         return cursor.rowcount > 0
-
-
-
 
 
 def load_set_words(set_id):

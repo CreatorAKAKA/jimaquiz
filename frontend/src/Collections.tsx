@@ -133,6 +133,7 @@ function Collections({ onStudySet, pathname, navigate }: CollectionsProps) {
   return (
     <div className="collections-page">
         <nav className="app-navigation">
+        <button onClick={() => navigate('/create')}>Create</button>
         <button onClick={() => navigate('/review')}>
             Review
         </button>
