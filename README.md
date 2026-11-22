@@ -23,35 +23,43 @@ Currently focused on anime subtitles, with plans to support manga, song lyrics, 
 - **Batch Processing:** Upload multiple screenshots and extract vocabulary across them.
 - **Strokle:** Play an experimental Wordle-inspired kanji guessing game that compares character components and their positions.
 
+
 ## Screenshots
 
 ### Vocabulary Extraction
 
-<img width="1569" height="1257" alt="image" src="https://github.com/user-attachments/assets/4ce18867-79af-4d53-a2ba-93bd77fb5bac" />
-
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/4ce18867-79af-4d53-a2ba-93bd77fb5bac" width="450" alt="Vocabulary Extraction" />
+</p>
 
 ### Vocabulary Collections
 
-<img width="1281" height="854" alt="image" src="https://github.com/user-attachments/assets/95e4a757-03b1-45fe-b834-420c80b1d33c" />
-<img width="1330" height="1253" alt="image" src="https://github.com/user-attachments/assets/1964f6b4-0853-4d85-a307-2ddb6369210d" />
-
-
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/95e4a757-03b1-45fe-b834-420c80b1d33c" width="30%" alt="Vocabulary Collections" />
+  <img src="https://github.com/user-attachments/assets/22ed1fe7-a0a5-4cd3-a2c1-dea73bb1f389" width="30%" alt="Collection Details" />
+  <img src="https://github.com/user-attachments/assets/1964f6b4-0853-4d85-a307-2ddb6369210d" width="30%" alt="Vocabulary Context Preview" />
+</p>
 
 ### Flashcard Review
 
-<img width="1119" height="974" alt="image" src="https://github.com/user-attachments/assets/c1a73ab1-8f8a-40e7-a7c4-dd551d968f2d" />
-<img width="1065" height="917" alt="image" src="https://github.com/user-attachments/assets/254fc1e0-4532-4665-8136-cc6cf0a06470" />
-
-
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/503a9778-35fd-4c2e-9943-2f4566d9009d" width="45%" alt="Flashcard Review" />
+  <img src="https://github.com/user-attachments/assets/81f0b8b0-2ea3-43fc-8d08-188593729199" width="45%" alt="Flashcard Answer" />
+</p>
 
 ### Strokle
 
-<img width="974" height="1244" alt="image" src="https://github.com/user-attachments/assets/77cc9704-ff6d-44b3-b83d-ff8602e49230" />
-<img width="938" height="1253" alt="image" src="https://github.com/user-attachments/assets/f80ad05c-7134-4662-8772-87597dd0a172" />
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/3f729b41-e709-4562-a97e-b2900a3c131b" width="30%" alt="Strokle Overview" />
+  <img src="https://github.com/user-attachments/assets/77cc9704-ff6d-44b3-b83d-ff8602e49230" width="30%" alt="Strokle Gameplay" />
+  <img src="https://github.com/user-attachments/assets/f80ad05c-7134-4662-8772-87597dd0a172" width="30%" alt="Strokle Component Matching" />
+</p>
 
 
 
-## Strokle 🀄
+
+
+## Strokle 
 
 Strokle is a kanji guessing minigame inspired by Wordle.
 
@@ -109,6 +117,22 @@ uvicorn api:app --reload
 
 The backend should be available at `http://127.0.0.1:8000`.
 
+
 ### 4. Start the frontend
 
-Open another
+Open another terminal while keeping the backend running.
+
+Navigate to the frontend directory:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend should be available at `http://localhost:5173`.
+
+Open the address in your browser to start using JimaQuiz.
+
+**Note:** Both the backend and frontend must be running simultaneously for the application to function properly. Initial setup may take longer while OCR and dictionary resources are initialized.
+
