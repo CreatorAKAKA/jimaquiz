@@ -6,6 +6,8 @@ import KanjiGlyph from './KanjiGlyph'
 import { getVGComponents } from './kanjiVG'
 import { matchVGKanji } from './strokleMatcher'
 import type { MatchStatus } from './strokleMatcher'
+import RadicalBank from './RadicalBank'
+
 getVGComponents('森').then((components) => {
   console.table(
     components.map((component) => ({
@@ -198,8 +200,9 @@ function Strokle() {
           </button>
         </div>
       )}
+
+      <RadicalBank />
     </div>
   )
 }
-
 export default Strokle
