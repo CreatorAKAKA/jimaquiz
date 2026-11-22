@@ -67,7 +67,8 @@ def get_words():
             "contexts": [
                 {
                     "screenshot_id": context["screenshot_id"],
-                    "sentence": context["sentence"]
+                    "sentence": context["sentence"],
+                    "surface": context.get("surface", "")
                 }
                 for context in info["contexts"]
             ],

@@ -211,7 +211,7 @@
   padding: 18px;
 }
 
-.example-sentence span {
+.example-sentence > span {
   font-size: 11px;
   letter-spacing: 1px;
   color: #f9a8d4;
@@ -334,4 +334,11 @@
 .context-navigation span {
   font-size: 14px;
   color: #d8b6ca;
+}
+
+.example-sentence .set-context-highlight {
+  background: transparent;
+  color: #f0a3cf;
+  font-weight: 700;
+  font-size: inherit;
 }

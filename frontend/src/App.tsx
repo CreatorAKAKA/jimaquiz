@@ -15,6 +15,7 @@ type Vocabulary = {
   contexts?: {
     screenshot_id: number
     sentence: string
+    surface?: string
   }[]
 }
 
@@ -408,7 +409,22 @@ async function rateCard(rating: string) {
 
               <div className="example-sentence">
                 <span>SENTENCE</span>
-                <p>{activeContext?.sentence ?? card.example}</p>
+                <p>
+                  {activeContext?.surface
+                    ? (activeContext.sentence ?? card.example)
+                        .split(activeContext.surface)
+                        .map((part, index) => (
+                          <span key={index}>
+                            {index > 0 && (
+                              <mark className="set-context-highlight">
+                                {activeContext.surface}
+                              </mark>
+                            )}
+                            {part}
+                          </span>
+                        ))
+                    : activeContext?.sentence ?? card.example}
+                </p>
               </div>
             </section>
           </div>
