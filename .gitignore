@@ -225,3 +225,13 @@ jimaquiz.db-journal
 jimaquiz.db-wal
 jimaquiz.db-shm
 *.db
+
+# Frontend dependencies and build output
+node_modules/
+frontend/dist/
+
+# Local screenshots and uploads (if generated at runtime)
+# Add the actual directory once confirmed
+
+# macOS
+.DS_Store

@@ -52,6 +52,19 @@ export async function matchVGKanji(
 
   const results: VGMatch[] = []
 
+    function isContained(
+    smaller: VGComponent,
+    larger: VGComponent
+  ): boolean {
+    return (
+      smaller.id !== larger.id &&
+      smaller.strokeIds.length < larger.strokeIds.length &&
+      smaller.strokeIds.every((id) =>
+        larger.strokeIds.includes(id)
+      )
+    )
+  }
+
   const pairs = guessed.flatMap((g) =>
     answer
       .filter((a) => a.character === g.character)
@@ -62,16 +75,30 @@ export async function matchVGKanji(
       }))
   )
 
+  
   pairs.sort((a, b) => {
-    const positionDifference =
-      Number(b.overlap >= 0.45) -
-      Number(a.overlap >= 0.45)
+    const aCorrectPosition = a.overlap >= 0.45
+    const bCorrectPosition = b.overlap >= 0.45
 
-    return positionDifference ||
+    // Prefer larger matching components.
+    const sizeDifference =
       b.guess.strokeIds.length -
-      a.guess.strokeIds.length ||
-      b.overlap - a.overlap
+      a.guess.strokeIds.length
+
+    if (sizeDifference !== 0) {
+      return sizeDifference
+    }
+
+    // For equally sized components, prefer correct positions.
+    if (aCorrectPosition !== bCorrectPosition) {
+      return Number(bCorrectPosition) -
+        Number(aCorrectPosition)
+    }
+
+    // Finally, prefer stronger positional overlap.
+    return b.overlap - a.overlap
   })
+
 
   for (const pair of pairs) {
     if (

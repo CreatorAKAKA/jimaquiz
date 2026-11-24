@@ -58,6 +58,7 @@ function KanjiGlyph({
 
   const rawSvg =
     loadedSvg?.code === code ? loadedSvg?.svg : null
+    console.log('Kanji:', kanji, 'Group colors:', groupColors)
 
   if (!rawSvg) {
     return (
@@ -96,6 +97,7 @@ function KanjiGlyph({
 
         while (parent) {
           const groupId = parent.getAttribute('id')
+          console.log('SVG group:', groupId, 'Color:', groupColors[groupId ?? ''])
           if (groupId && groupColors[groupId]) {
             status = groupColors[groupId]
             break
