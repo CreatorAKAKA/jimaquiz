@@ -325,3 +325,30 @@
   color: #f9a8d4;
   font-size: 20px;
 }
+
+.strokle-difficulty {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 auto 24px;
+}
+
+.strokle-difficulty button {
+  background: #251f29;
+  color: #bca5b5;
+  border: 1px solid #594353;
+  border-radius: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.strokle-difficulty button:hover {
+  border-color: #efa5ce;
+}
+
+.strokle-difficulty button.active {
+  background: #493043;
+  color: #efa5ce;
+  border-color: #efa5ce;
+}

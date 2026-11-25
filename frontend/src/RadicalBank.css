@@ -39,3 +39,21 @@
   color: #f7eaf2;
   font-size: 21px;
 }
+
+.radical-key.correct {
+  background: #284d3e;
+  border-color: #8bd3ad;
+  color: #8bd3ad;
+}
+
+.radical-key.misplaced {
+  background: #59472d;
+  border-color: #efcc90;
+  color: #efcc90;
+}
+
+.radical-key.absent {
+  background: #201c24;
+  border-color: #403744;
+  color: #706778;
+}

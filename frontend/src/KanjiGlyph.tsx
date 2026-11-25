@@ -97,7 +97,6 @@ function KanjiGlyph({
 
         while (parent) {
           const groupId = parent.getAttribute('id')
-          console.log('SVG group:', groupId, 'Color:', groupColors[groupId ?? ''])
           if (groupId && groupColors[groupId]) {
             status = groupColors[groupId]
             break

@@ -1,80 +1,39 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import './Strokle.css'
-import { kanjiData, matchKanji } from './kanjiData'
-import type { KanjiNode } from './kanjiData'
+import { kanjiData } from './kanjiData'
 import KanjiGlyph from './KanjiGlyph'
-import { getVGComponents } from './kanjiVG'
 import { matchVGKanji } from './strokleMatcher'
 import type { MatchStatus } from './strokleMatcher'
 import RadicalBank from './RadicalBank'
 import joyoData from './data/joyo.json'
+import strokleHints from './data/strokle-hints.json'
 
-getVGComponents('森').then((components) => {
-  console.table(
-    components.map((component) => ({
-      id: component.id,
-      character: component.character,
-      ...component.bounds,
-    }))
-  )
-})
+type Difficulty = 'N5' | 'N4' | 'N3' | 'N2' | 'N1' | 'All'
 
-matchVGKanji('森', '林').then(console.table)
-matchVGKanji('明', '晴').then(console.table)
-matchVGKanji('静', '晴').then(console.table)
+const difficulties: Difficulty[] = [
+  'N5', 'N4', 'N3', 'N2', 'N1', 'All'
+]
 
-
-
-function KanjiShape({
-  node,
-  matches = [],
-  position = 'root',
-}: {
-  node: KanjiNode
-  matches?: ReturnType<typeof matchKanji>
-  position?: string
-}) {
-  if (node.children.length === 0) {
-    const match = matches.find(
-      (item) => item.position === position
+function getAnswerPool(difficulty: Difficulty) {
+  return Object.entries(joyoData)
+    .filter(([kanji, data]) =>
+      Object.hasOwn(kanjiData, kanji) &&
+      (
+        difficulty === 'All' ||
+        data.jlpt_new === Number(difficulty.slice(1))
+      )
     )
-
-    return (
-      <div className={`strokle-component ${match?.status ?? ''}`}>
-        {node.character}
-      </div>
-    )
-  }
-
-  const vertical = ['⿱', '⿳'].includes(node.character)
-
-  return (
-    <div
-      className={`strokle-structure ${
-        vertical ? 'vertical' : 'horizontal'
-      }`}
-    >
-      {node.children.map((child, index) => (
-        <KanjiShape
-          key={index}
-          node={child}
-          matches={matches}
-          position={`${position}/${node.character}:${index}`}
-        />
-      ))}
-    </div>
-  )
+    .map(([kanji]) => kanji)
 }
 
-const answerPool = Object.keys(joyoData).filter(
-  (kanji) => Object.hasOwn(kanjiData, kanji)
-)
-
-console.log('Strokle answer pool:', answerPool.length)
-
 function Strokle() {
+  const [difficulty, setDifficulty] =
+    useState<Difficulty>('N3')
+
+  const answerPool = getAnswerPool(difficulty)
+
   const [target, setTarget] = useState(
-    () => answerPool[Math.floor(Math.random() * answerPool.length)] ?? '晴'
+    () => answerPool[Math.floor(Math.random() * answerPool.length)]
   )
   const [input, setInput] = useState('')
   const [guesses, setGuesses] = useState<string[]>([])
@@ -82,68 +41,36 @@ function Strokle() {
     Record<string, Record<string, MatchStatus>>
   >({})
   const [error, setError] = useState('')
-  const [gaveUp, setGaveUp] = useState(false)
+  const [showVocabularyHint, setShowVocabularyHint] = useState(false)
   const [showRadicalHint, setShowRadicalHint] = useState(false)
-  const [showStrokeHint, setShowStrokeHint] = useState(false)
   const [showMeaningHint, setShowMeaningHint] = useState(false)
-  const [hintComponents, setHintComponents] = useState<
-    Awaited<ReturnType<typeof getVGComponents>>
-  >([])
 
   const won = guesses.includes(target)
   const lost = guesses.length >= 9 && !won
-  const finished = won || lost || gaveUp
-
-
-  useEffect(() => {
-    let cancelled = false
-
-    setHintComponents([])
-
-    getVGComponents(target)
-      .then((components) => {
-        if (!cancelled) {
-          setHintComponents(components)
-        }
-      })
-      .catch(console.error)
-
-    return () => {
-      cancelled = true
-    }
-  }, [target])
-
-  const knownComponents = new Set(
-    guesses.flatMap((guess) =>
-      Object.entries(guessColors[guess] ?? {})
-        .filter(([, status]) =>
-          status === 'correct' || status === 'misplaced'
-        )
-        .map(([id]) => id)
-    )
-  )
-
+  const finished = won || lost
 
   const targetInfo =
     joyoData[target as keyof typeof joyoData]
 
-  const hintCandidates = hintComponents
-    .filter((component) =>
-      component.character !== target &&
-      component.strokeIds.length >= 2 &&
-      component.strokeIds.length < targetInfo.strokes
-    )
-    .sort((a, b) =>
-      b.strokeIds.length - a.strokeIds.length
-    )
+  const targetHints =
+    strokleHints[target as keyof typeof strokleHints]
+
+  const vocabularyHint = targetHints?.vocabulary ?? []
 
   const radicalHint =
-    hintCandidates[0]?.character ?? null
+    targetHints?.radical === target
+      ? null
+      : targetHints?.radical ?? null
 
   const meaningHint =
-    targetInfo?.meanings?.[0] ?? null
+    targetInfo?.meanings?.slice(0, 3).join('; ') || null
+
+  const [componentStatuses, setComponentStatuses] =
+    useState<Record<string, MatchStatus>>({})
 
 
+  console.log('Component statuses:', componentStatuses)
+  
   async function submitGuess() {
     if (finished) return
 
@@ -163,11 +90,34 @@ function Strokle() {
     try {
       const matches = await matchVGKanji(guess, target)
       console.table(matches)
+      setComponentStatuses((previous) => {
+        const updated = { ...previous }
+
+        const priority: Record<string, number> = {
+          correct: 3,
+          misplaced: 2,
+          absent: 1,
+          nested: 0,
+        }
+
+        for (const match of matches) {
+          const current = updated[match.character]
+
+          if (
+            (priority[match.status] ?? 0) >
+            (priority[current] ?? 0)
+          ) {
+            updated[match.character] = match.status
+          }
+        }
+        console.log('UPDATED STATUSES:', updated)
+        return updated
+      })
 
       setGuessColors((previous) => ({
         ...previous,
         [guess]: Object.fromEntries(
-          matches.map((match) => [
+          matches.filter((match) => match.status !== 'absent').map((match) => [
             match.id,
             match.status,
           ])
@@ -183,23 +133,27 @@ function Strokle() {
     }
   }
 
-  function newGame() {
-    const candidates = answerPool.filter(
-        (kanji) => kanji !== target
+  function newGame(nextDifficulty: Difficulty = difficulty) {
+    const pool = getAnswerPool(nextDifficulty)
+
+    const candidates = pool.filter(
+      (kanji) => kanji !== target
     )
+
+    setDifficulty(nextDifficulty)
 
     setTarget(
       candidates[Math.floor(Math.random() * candidates.length)]
+      ?? pool[0]
     )
-
     setGuesses([])
     setGuessColors({})
+    setComponentStatuses({})
     setInput('')
     setError('')
+    setShowVocabularyHint(false)
     setShowRadicalHint(false)
-    setShowStrokeHint(false)
     setShowMeaningHint(false)
-    setGaveUp(false)
   }
 
   return (
@@ -209,6 +163,22 @@ function Strokle() {
       <p className="strokle-subtitle">
         Every kanji tells a story. Piece it together.
       </p>
+
+      <div className="strokle-difficulty">
+        {difficulties.map((level) => (
+          <button
+            key={level}
+            className={difficulty === level ? 'active' : ''}
+            onClick={() => {
+              if (level !== difficulty) {
+                newGame(level)
+              }
+            }}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
 
       <div className="strokle-board">
         {Array.from({ length: 9 }, (_, index) => {
@@ -241,23 +211,23 @@ function Strokle() {
 
         <div className="strokle-hint-buttons">
           <button
-            className={showRadicalHint ? 'revealed' : ''}
-            disabled={guesses.length < 3 || showRadicalHint}
-            onClick={() => setShowRadicalHint(true)}
+            className={showVocabularyHint ? 'revealed' : ''}
+            disabled={guesses.length < 3 || showVocabularyHint}
+            onClick={() => setShowVocabularyHint(true)}
           >
-            <span className="hint-icon">◇</span>
-            <span>Component</span>
-            <small>{guesses.length < 3 ? `${3 - guesses.length} left` : showRadicalHint ? 'Revealed' : 'Unlock'}</small>
+            <span className="hint-icon">語</span>
+            <span>Vocabulary</span>
+            <small>{guesses.length < 3 ? `${3 - guesses.length} left` : showVocabularyHint ? 'Revealed' : 'Unlock'}</small>
           </button>
 
           <button
-            className={showStrokeHint ? 'revealed' : ''}
-            disabled={guesses.length < 5 || showStrokeHint}
-            onClick={() => setShowStrokeHint(true)}
+            className={showRadicalHint ? 'revealed' : ''}
+            disabled={guesses.length < 5 || showRadicalHint}
+            onClick={() => setShowRadicalHint(true)}
           >
-            <span className="hint-icon">＃</span>
-            <span>Strokes</span>
-            <small>{guesses.length < 5 ? `${5 - guesses.length} left` : showStrokeHint ? 'Revealed' : 'Unlock'}</small>
+            <span className="hint-icon">部</span>
+            <span>Radical</span>
+            <small>{guesses.length < 5 ? `${5 - guesses.length} left` : showRadicalHint ? 'Revealed' : 'Unlock'}</small>
           </button>
 
           <button
@@ -271,20 +241,42 @@ function Strokle() {
           </button>
         </div>
 
-        {(showRadicalHint || showStrokeHint || showMeaningHint) && (
+        {(finished || showVocabularyHint || showRadicalHint || showMeaningHint) && (
           <div className="strokle-hint-results">
-            {showRadicalHint && (
-              <p>Component: <strong>{radicalHint ?? 'Unavailable'}</strong></p>
+
+            {(showVocabularyHint || finished) && (
+              <div className="strokle-vocabulary-hint">
+                <p>Vocabulary:</p>
+
+                {vocabularyHint.length > 0 ? (
+                  vocabularyHint.map((item, index) => (
+                    <p key={index}>
+                      <strong>
+                        {item.word.replaceAll('□', finished ? target : '___')}
+                      </strong>
+                      {finished && ` — ${item.meaning}`}
+                    </p>
+                  ))
+                ) : (
+                  <p>No vocabulary hint available.</p>
+                )}
+              </div>
             )}
-            {showStrokeHint && (
-              <p>Strokes: <strong>{targetInfo?.strokes ?? 'Unknown'}</strong></p>
+
+            {(showRadicalHint || finished) && (
+              <p>Radical: <strong>{finished
+                ? targetHints?.radical ?? 'Unavailable'
+                : radicalHint ?? 'Hidden to avoid spoilers'}</strong></p>
             )}
-            {showMeaningHint && (
+
+            {(showMeaningHint || finished) && (
               <p>Meaning: <strong>{meaningHint ?? 'Unknown'}</strong></p>
             )}
+
           </div>
         )}
       </div>
+
 
 
       {!finished && (
@@ -322,15 +314,6 @@ function Strokle() {
         <p className="strokle-error">{error}</p>
       )}
 
-      {!finished && (
-        <button
-          className="strokle-end-game"
-          onClick={() => setGaveUp(true)}
-        >
-          End Game
-        </button>
-      )}
-
       {finished && (
         <div className="strokle-result">
           <h2>
@@ -339,13 +322,13 @@ function Strokle() {
               : `The answer was ${target}`}
           </h2>
 
-          <button onClick={newGame}>
+          <button onClick={() => newGame()}>
             Play Again
           </button>
         </div>
       )}
 
-      <RadicalBank />
+      <RadicalBank statuses={componentStatuses} />
     </div>
   )
 }

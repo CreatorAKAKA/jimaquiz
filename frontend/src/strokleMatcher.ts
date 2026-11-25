@@ -129,5 +129,54 @@ export async function matchVGKanji(
     )
   }
 
+    const matchedParents = [...results]
+
+  for (const match of matchedParents) {
+    const parent = guessed.find(
+      (component) => component.id === match.id
+    )
+
+    if (!parent) continue
+
+    for (const child of guessed) {
+      if (!isContained(child, parent)) continue
+
+      if (results.some((result) => result.id === child.id)) {
+        continue
+      }
+
+      const candidates = answer.filter(
+        (component) => component.character === child.character
+      )
+
+      if (candidates.length === 0) continue
+
+      const correctPosition = candidates.some(
+        (component) =>
+          getOverlap(child.bounds, component.bounds) >= 0.45
+      )
+
+      results.push({
+        id: child.id,
+        character: child.character,
+        status: correctPosition ? 'correct' : 'misplaced',
+      })
+    }
+  }
+
+  const answerCharacters = new Set(
+    answer.map((component) => component.character)
+  )
+
+  for (const component of guessed) {
+    if (!answerCharacters.has(component.character)) {
+      results.push({
+        id: component.id,
+        character: component.character,
+        status: 'absent',
+      })
+    }
+  }
+
   return results
 }
