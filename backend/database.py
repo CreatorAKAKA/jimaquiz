@@ -7,6 +7,7 @@ from fsrs import Scheduler, Card, Rating, ReviewLog
 
 
 DB_PATH = Path(__file__).resolve().parent.parent / "data" / "jimaquiz.db"
+DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
