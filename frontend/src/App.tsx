@@ -4,7 +4,7 @@ import { toHiragana } from 'wanakana'
 import './App.css'
 import Collections from './Collections'
 import CreatePage from './CreatePage'
-import Strokle from './Strokle'
+import Strokle from './strokle/src/Strokle'
 
 type Vocabulary = {
   word: string
