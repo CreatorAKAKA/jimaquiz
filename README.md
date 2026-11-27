@@ -59,17 +59,18 @@ Currently focused on anime subtitles, with plans to support manga, song lyrics, 
 
 
 
-## Strokle 
+## Strokle
 
-Strokle is a kanji guessing minigame inspired by Wordle.
+Strokle is a Wordle-inspired kanji review game that challenges players to recall kanji through their structural components and vocabulary.
 
 Instead of comparing individual letters, Strokle breaks down kanji into their structural components and provides color-coded feedback based on component matches and positioning.
 
-Players have nine attempts to identify the mystery kanji.
+Players have nine attempts to identify the mystery kanji, with additional hints unlocked throughout the game.
 
-The game uses SVG stroke data from KanjiVG and character decomposition data from CJKVI-IDS to analyze and compare kanji structures.
+Strokle is also available as a standalone web application and is integrated into JimaQuiz through a Git submodule.
 
-Strokle is currently a prototype, with ongoing improvements to its matching algorithm, component bank, and gameplay.
+- [Play Strokle](https://creatorakaka.github.io/strokle/)
+- [Strokle Repository](https://github.com/CreatorAKAKA/strokle)
 
 ## Tech Stack
 
@@ -87,12 +88,26 @@ Strokle is currently a prototype, with ongoing improvements to its matching algo
 | Pillow / NumPy | Image processing |
 | KanjiVG / CJKVI-IDS | Kanji stroke rendering and structural analysis |
 
+## Project Structure
+
+```
+jimaquiz/
+├── backend/          # FastAPI, OCR, dictionary, and database
+├── frontend/         # React / TypeScript application
+│   └── src/
+│       └── strokle/  # Strokle Git submodule
+├── tests/            # Development test scripts
+├── scripts/          # Database maintenance scripts
+├── legacy/           # Original Streamlit prototype
+└── README.md
+```
+
 ## Getting Started
 
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/CreatorAKAKA/jimaquiz.git
+git clone --recurse-submodules https://github.com/CreatorAKAKA/jimaquiz.git
 cd jimaquiz
 ```
 
@@ -101,28 +116,23 @@ cd jimaquiz
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-```
-
-Install the backend dependencies:
-
-```bash
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
 ```
 
 ### 3. Start the backend
 
+From the project root:
+
 ```bash
+cd backend
 uvicorn api:app --reload
 ```
 
 The backend should be available at `http://127.0.0.1:8000`.
 
-
 ### 4. Start the frontend
 
-Open another terminal while keeping the backend running.
-
-Navigate to the frontend directory:
+Open another terminal from the project root:
 
 ```bash
 cd frontend
@@ -132,7 +142,14 @@ npm run dev
 
 The frontend should be available at `http://localhost:5173`.
 
-Open the address in your browser to start using JimaQuiz.
+Both the backend and frontend must be running simultaneously for the application to function properly.
 
-**Note:** Both the backend and frontend must be running simultaneously for the application to function properly. Initial setup may take longer while OCR and dictionary resources are initialized.
+### Updating Strokle
 
+To retrieve the latest version of Strokle, run the following from the project root:
+
+```bash
+git submodule update --init --remote frontend/src/strokle
+```
+
+Commit the updated submodule reference to preserve the version used by JimaQuiz.
