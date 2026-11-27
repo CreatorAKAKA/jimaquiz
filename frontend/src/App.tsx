@@ -22,12 +22,12 @@ type Vocabulary = {
 function App() {
 
   const [vocabulary, setVocabulary] = useState<Vocabulary[]>([])
-  const [reviewVocabulary, setReviewVocabulary] = useState<Vocabulary[]>([])
-  const [reviewQueue, setReviewQueue] = useState<Vocabulary[]>([])
+  const [, setReviewVocabulary] = useState<Vocabulary[]>([])
+  const [, setReviewQueue] = useState<Vocabulary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [studyMode, setStudyMode] = useState<'review' | 'set'>('review')
-  const [selectedSetId, setSelectedSetId] = useState<number | null>(null)
+  const [, setStudyMode] = useState<'review' | 'set'>('review')
+  const [, setSelectedSetId] = useState<number | null>(null)
 
 
   const [pathname, setPathname] = useState(
@@ -77,7 +77,7 @@ function App() {
   const [flipped, setFlipped] = useState(false)
   const [contextIndex, setContextIndex] = useState(0)
   const [readingInput, setReadingInput] = useState('')
-  const [collectionsReset, setCollectionsReset] = useState(0)
+  const [collectionsReset] = useState(0)
 
 
   

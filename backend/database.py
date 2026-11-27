@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from fsrs import Scheduler, Card, Rating, ReviewLog
 
 
-DB_PATH = Path(__file__).parent / "jimaquiz.db"
+DB_PATH = Path(__file__).resolve().parent.parent / "data" / "jimaquiz.db"
 
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:

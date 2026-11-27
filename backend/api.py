@@ -19,9 +19,8 @@ import easyocr
 from PIL import Image, ImageEnhance
 from functools import lru_cache
 
-from token_test import extract_vocabulary
-from dictionary_test import get_definitions, get_word_info
-
+from tokenizer import extract_vocabulary
+from dictionary import get_definitions, get_word_info
 
 
 app = FastAPI(title="JimaQuiz API")

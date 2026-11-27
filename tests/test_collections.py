@@ -1,4 +1,4 @@
-from database import init_db, create_group, create_set, load_groups
+from backend.database import init_db, create_group, create_set, load_groups
 
 init_db()
 

@@ -1,6 +1,6 @@
 import sqlite3
 import hashlib
-from database import DB_PATH
+from backend.database import DB_PATH
 
 with sqlite3.connect(DB_PATH) as conn:
     screenshots = conn.execute(

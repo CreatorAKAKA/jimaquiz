@@ -1,4 +1,4 @@
-from database import (
+from backend.database import (
     init_db,
     load_groups,
     load_flashcards,

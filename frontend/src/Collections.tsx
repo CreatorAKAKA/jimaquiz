@@ -4,7 +4,6 @@ import './Collections.css'
 import SetPage from './SetPage'
 import ProgressBadges, { type SetProgress } from './ProgressBadges'
 import CollectionPage from './CollectionPage'
-import CollectionSetCard from './CollectionSetCard'
 
 type CollectionSet = {
   id: number
